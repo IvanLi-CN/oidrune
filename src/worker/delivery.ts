@@ -15,6 +15,11 @@ export async function deliverBatch(
       message.ack();
       continue;
     }
+    if (event.status === "dead_letter") {
+      await env.DELIVERY_DLQ.send({ eventId: event.id });
+      message.ack();
+      continue;
+    }
     if (!event.destinationChatId || !env.TELEGRAM_BOT_TOKEN) {
       await failTerminal(
         repository,
@@ -83,6 +88,11 @@ async function failTerminal(
     errorCode,
   );
   await repository.markDeadLetter(eventId, errorCode);
+  await repository.auditSystem(
+    "delivery.dead_lettered",
+    eventId,
+    `terminal Telegram failure: ${errorCode}`,
+  );
   await env.DELIVERY_DLQ.send({ eventId });
   message.ack();
 }

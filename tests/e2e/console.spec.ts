@@ -26,3 +26,14 @@ test("operator can open a dead-letter retry confirmation on mobile", async ({
     page.getByRole("dialog", { name: "Retry dead letter" }),
   ).toBeVisible();
 });
+
+test("operator can inspect terminal delivery audit records", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Delivery" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Audit trail" }),
+  ).toBeVisible();
+  await expect(page.getByText("delivery.dead_lettered")).toBeVisible();
+});

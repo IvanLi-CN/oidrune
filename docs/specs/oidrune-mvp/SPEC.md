@@ -114,9 +114,11 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 5. An authenticated operator manages source policies, the one destination,
    trusted workflow releases, events, DLQ retry, and fixed test messages from
    the console.
-6. The Oidrune Release workflow tags and deploys a successful release, then
-   registers its own reusable workflow SHA as trusted. The console can revoke
-   or manually restore that trust record.
+6. The Oidrune Release workflow writes a six-hour prepared release snapshot,
+   tags and deploys a successful release, then registers its own reusable
+   workflow SHA as permanently trusted. Its failure-notification job may use
+   only that prepared SHA; the console can revoke or manually restore a
+   permanent trust record.
 
 ### Edge cases / errors
 

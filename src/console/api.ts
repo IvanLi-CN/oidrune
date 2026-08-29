@@ -19,6 +19,15 @@ export interface DeliveryEvent {
   delivered_at: string | null;
 }
 
+export interface AuditEntry {
+  id: string;
+  actor: string;
+  action: string;
+  subject: string;
+  detail: string;
+  occurredAt: string;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     credentials: "same-origin",
@@ -39,6 +48,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const adminApi = {
   config: () => request<AdminConfig>("/api/admin/config"),
   events: () => request<{ events: DeliveryEvent[] }>("/api/admin/events"),
+  audit: () => request<{ entries: AuditEntry[] }>("/api/admin/audit"),
   setDestination: (chatId: string, displayName: string) =>
     request<void>("/api/admin/destination", {
       method: "PUT",

@@ -18,12 +18,20 @@ export class ReplayGuard implements DurableObject {
       await this.state.storage.delete("reservation");
       return new Response(null, { status: 204 });
     }
-    const existing = await this.state.storage.get<number>("reservation");
-    if (existing) {
+    const reserved = await this.state.storage.transaction(
+      async (transaction) => {
+        const existing = await transaction.get<number>("reservation");
+        if (existing) {
+          return false;
+        }
+        await transaction.put("reservation", expiresAt);
+        await transaction.setAlarm(expiresAt * 1_000);
+        return true;
+      },
+    );
+    if (!reserved) {
       return new Response("Replay", { status: 409 });
     }
-    await this.state.storage.put("reservation", expiresAt);
-    await this.state.storage.setAlarm(expiresAt * 1_000);
     return new Response(null, { status: 201 });
   }
 

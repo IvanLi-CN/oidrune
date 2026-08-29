@@ -1,4 +1,4 @@
-import type { AdminConfig, DeliveryEvent } from "./api";
+import type { AdminConfig, AuditEntry, DeliveryEvent } from "./api";
 
 export const demoConfig: AdminConfig = {
   destination: {
@@ -38,5 +38,24 @@ export const demoEvents: DeliveryEvent[] = [
     status: "accepted",
     received_at: "2026-08-29T05:03:55.000Z",
     delivered_at: null,
+  },
+];
+
+export const demoAudit: AuditEntry[] = [
+  {
+    id: "audit_01J4A1R9",
+    actor: "delivery-worker",
+    action: "delivery.dead_lettered",
+    subject: "evt_01J4A0PCD3BFAQV5ZJHR",
+    detail: "terminal Telegram failure: telegram_http_429",
+    occurredAt: "2026-08-29T05:32:05.000Z",
+  },
+  {
+    id: "audit_01J49YZC",
+    actor: "operator@example.com",
+    action: "source.owner.added",
+    subject: "583231",
+    detail: "immutable GitHub owner ID",
+    occurredAt: "2026-08-29T05:00:00.000Z",
   },
 ];

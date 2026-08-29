@@ -36,6 +36,15 @@ export interface AdminConfig {
   trustedWorkflowShas: string[];
 }
 
+export interface AuditEntry {
+  id: string;
+  actor: string;
+  action: string;
+  subject: string;
+  detail: string;
+  occurredAt: string;
+}
+
 export class OidruneRepository {
   constructor(private readonly db: D1Database) {}
 
@@ -60,13 +69,21 @@ export class OidruneRepository {
   }
 
   async isTrustedWorkflowRelease(sha: string): Promise<boolean> {
-    const row = await this.db
-      .prepare(
-        "SELECT sha FROM trusted_workflow_releases WHERE sha = ? AND revoked_at IS NULL",
-      )
-      .bind(sha)
-      .first<{ sha: string }>();
-    return row !== null;
+    const [trusted, prepared] = await Promise.all([
+      this.db
+        .prepare(
+          "SELECT sha FROM trusted_workflow_releases WHERE sha = ? AND revoked_at IS NULL",
+        )
+        .bind(sha)
+        .first<{ sha: string }>(),
+      this.db
+        .prepare(
+          "SELECT workflow_sha FROM release_snapshots WHERE workflow_sha = ? AND status = 'prepared' AND created_at >= datetime('now', '-6 hours')",
+        )
+        .bind(sha)
+        .first<{ workflow_sha: string }>(),
+    ]);
+    return trusted !== null || prepared !== null;
   }
 
   async getDestination(): Promise<DestinationRow | null> {
@@ -344,7 +361,30 @@ export class OidruneRepository {
     return result.results;
   }
 
-  async retryDeadLetter(
+  async listAudit(): Promise<AuditEntry[]> {
+    const result = await this.db
+      .prepare(
+        "SELECT id, actor, action, subject, detail, occurred_at FROM audit_log ORDER BY occurred_at DESC LIMIT 100",
+      )
+      .all<{
+        id: string;
+        actor: string;
+        action: string;
+        subject: string;
+        detail: string;
+        occurred_at: string;
+      }>();
+    return result.results.map((row) => ({
+      id: row.id,
+      actor: row.actor,
+      action: row.action,
+      subject: row.subject,
+      detail: row.detail,
+      occurredAt: row.occurred_at,
+    }));
+  }
+
+  async beginDeadLetterRetry(
     eventId: string,
     actor: OperatorIdentity,
   ): Promise<NotificationEvent | null> {
@@ -352,25 +392,45 @@ export class OidruneRepository {
     if (event?.status !== "dead_letter") {
       return null;
     }
+    const retriedAt = now();
     await this.db.batch([
       this.db
         .prepare(
-          "UPDATE notification_events SET status = 'accepted', expires_at = ? WHERE id = ?",
+          "UPDATE notification_events SET status = 'retrying', expires_at = ? WHERE id = ?",
         )
         .bind(inDays(90), eventId),
       this.db
         .prepare(
           "UPDATE dead_letters SET retried_at = ?, retried_by = ? WHERE event_id = ?",
         )
-        .bind(now(), actor.subject, eventId),
+        .bind(retriedAt, actor.subject, eventId),
+      this.auditStatement(
+        actor.email ?? actor.subject,
+        "dead_letter.retry_queued",
+        eventId,
+        "stored normalized event is awaiting queue delivery",
+      ),
     ]);
-    await this.audit(
-      actor,
-      "dead_letter.retried",
-      eventId,
-      "stored normalized event re-enqueued",
-    );
-    return { ...event, status: "accepted" };
+    return { ...event, status: "retrying" };
+  }
+
+  async restoreDeadLetterRetry(
+    eventId: string,
+    actor: OperatorIdentity,
+  ): Promise<void> {
+    await this.db.batch([
+      this.db
+        .prepare(
+          "UPDATE notification_events SET status = 'dead_letter', expires_at = ? WHERE id = ? AND status = 'retrying'",
+        )
+        .bind(inDays(90), eventId),
+      this.auditStatement(
+        actor.email ?? actor.subject,
+        "dead_letter.retry_queue_failed",
+        eventId,
+        "queue handoff failed; retry remains available",
+      ),
+    ]);
   }
 
   async cleanupExpired(): Promise<number> {
@@ -387,19 +447,33 @@ export class OidruneRepository {
     subject: string,
     detail: string,
   ): Promise<void> {
-    await this.db
+    await this.auditStatement(
+      actor.email ?? actor.subject,
+      action,
+      subject,
+      detail,
+    ).run();
+  }
+
+  async auditSystem(
+    action: string,
+    subject: string,
+    detail: string,
+  ): Promise<void> {
+    await this.auditStatement("delivery-worker", action, subject, detail).run();
+  }
+
+  private auditStatement(
+    actor: string,
+    action: string,
+    subject: string,
+    detail: string,
+  ): D1PreparedStatement {
+    return this.db
       .prepare(
         "INSERT INTO audit_log (id, actor, action, subject, detail, occurred_at) VALUES (?, ?, ?, ?, ?, ?)",
       )
-      .bind(
-        crypto.randomUUID(),
-        actor.email ?? actor.subject,
-        action,
-        subject,
-        detail,
-        now(),
-      )
-      .run();
+      .bind(crypto.randomUUID(), actor, action, subject, detail, now());
   }
 }
 

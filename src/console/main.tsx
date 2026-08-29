@@ -16,8 +16,13 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useReducer, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { type AdminConfig, adminApi, type DeliveryEvent } from "./api";
-import { demoConfig, demoEvents } from "./demo";
+import {
+  type AdminConfig,
+  type AuditEntry,
+  adminApi,
+  type DeliveryEvent,
+} from "./api";
+import { demoAudit, demoConfig, demoEvents } from "./demo";
 import "./styles.css";
 
 type Section = "Overview" | "Sources" | "Destination" | "Releases" | "Delivery";
@@ -31,12 +36,18 @@ type Confirmation = {
 interface ConsoleState {
   config: AdminConfig;
   events: DeliveryEvent[];
+  audit: AuditEntry[];
   loading: boolean;
   notice: Notice;
 }
 
 type ConsoleAction =
-  | { type: "loaded"; config: AdminConfig; events: DeliveryEvent[] }
+  | {
+      type: "loaded";
+      config: AdminConfig;
+      events: DeliveryEvent[];
+      audit: AuditEntry[];
+    }
   | { type: "notice"; notice: Notice }
   | { type: "loading"; loading: boolean }
   | { type: "config"; config: AdminConfig }
@@ -45,6 +56,7 @@ type ConsoleAction =
 const initialState: ConsoleState = {
   config: demoConfig,
   events: demoEvents,
+  audit: demoAudit,
   loading: !__OIDRUNE_DEMO__,
   notice: null,
 };
@@ -56,6 +68,7 @@ function reducer(state: ConsoleState, action: ConsoleAction): ConsoleState {
         ...state,
         config: action.config,
         events: action.events,
+        audit: action.audit,
         loading: false,
       };
     case "notice":
@@ -88,11 +101,17 @@ function App() {
     }
     dispatch({ type: "loading", loading: true });
     try {
-      const [config, eventResponse] = await Promise.all([
+      const [config, eventResponse, auditResponse] = await Promise.all([
         adminApi.config(),
         adminApi.events(),
+        adminApi.audit(),
       ]);
-      dispatch({ type: "loaded", config, events: eventResponse.events });
+      dispatch({
+        type: "loaded",
+        config,
+        events: eventResponse.events,
+        audit: auditResponse.entries,
+      });
     } catch (error) {
       dispatch({ type: "loading", loading: false });
       dispatch({
@@ -224,6 +243,7 @@ function App() {
         {section === "Delivery" ? (
           <Delivery
             events={state.events}
+            audit={state.audit}
             onEvents={changeEvents}
             onConfirm={setConfirmation}
           />
@@ -701,10 +721,12 @@ function Releases({
 
 function Delivery({
   events,
+  audit,
   onEvents,
   onConfirm,
 }: {
   events: DeliveryEvent[];
+  audit: AuditEntry[];
   onEvents: (value: DeliveryEvent[]) => void;
   onConfirm: (value: Confirmation) => void;
 }) {
@@ -738,6 +760,43 @@ function Delivery({
           }
         />
       </section>
+      <section className="section-block">
+        <div className="section-heading">
+          <div>
+            <h2>Audit trail</h2>
+            <p>Operator changes and terminal delivery outcomes only.</p>
+          </div>
+        </div>
+        <AuditTable entries={audit} />
+      </section>
+    </div>
+  );
+}
+
+function AuditTable({ entries }: { entries: AuditEntry[] }) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Actor</th>
+            <th>Recorded</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => (
+            <tr key={entry.id}>
+              <td>
+                <strong>{entry.action}</strong>
+                <span>{entry.detail}</span>
+              </td>
+              <td>{entry.actor}</td>
+              <td>{formatDate(entry.occurredAt)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

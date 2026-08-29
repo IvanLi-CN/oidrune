@@ -13,6 +13,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: write
   id-token: write
   pull-requests: read
@@ -38,7 +39,6 @@ jobs:
         with:
           ref: ${{ steps.commit.outputs.sha }}
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
-      - run: bun install --frozen-lockfile
       - name: Resolve immutable release intent
         id: intent
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
@@ -54,12 +54,15 @@ jobs:
             return intent[0];
         env:
           MERGE_SHA: ${{ steps.commit.outputs.sha }}
-      - name: Snapshot release intent
+      - name: Prepare release notification authority
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           MERGE_SHA: ${{ steps.commit.outputs.sha }}
           INTENT: ${{ steps.intent.outputs.result }}
         run: |
-          bunx wrangler d1 execute oidrune --remote --command "INSERT INTO release_snapshots (merge_commit_sha, release_intent, workflow_sha, status, created_at, updated_at) VALUES ('${MERGE_SHA}', '${INTENT}', '${MERGE_SHA}', 'prepared', datetime('now'), datetime('now')) ON CONFLICT(merge_commit_sha) DO UPDATE SET release_intent=excluded.release_intent, updated_at=excluded.updated_at"
+          bunx --bun wrangler@4.127.1 d1 execute oidrune --remote --command "INSERT INTO release_snapshots (merge_commit_sha, release_intent, workflow_sha, status, created_at, updated_at) VALUES ('${MERGE_SHA}', '${INTENT}', '${MERGE_SHA}', 'prepared', datetime('now'), datetime('now')) ON CONFLICT(merge_commit_sha) DO UPDATE SET release_intent=excluded.release_intent, workflow_sha=excluded.workflow_sha, status='prepared', updated_at=excluded.updated_at"
+      - run: bun install --frozen-lockfile
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd
         with:
@@ -68,6 +71,8 @@ jobs:
           command: deploy
       - name: Promote trusted reusable workflow release
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           MERGE_SHA: ${{ steps.commit.outputs.sha }}
         run: |
           bunx wrangler d1 execute oidrune --remote --command "INSERT INTO trusted_workflow_releases (sha, created_by, revoked_at, revoked_by) VALUES ('${MERGE_SHA}', 'release-automation', NULL, NULL) ON CONFLICT(sha) DO UPDATE SET revoked_at=NULL, revoked_by=NULL; UPDATE release_snapshots SET workflow_sha='${MERGE_SHA}', status='deployed', updated_at=datetime('now') WHERE merge_commit_sha='${MERGE_SHA}'"
@@ -77,3 +82,12 @@ jobs:
           tag_name: v0.1.${{ github.run_number }}
           target_commitish: ${{ steps.commit.outputs.sha }}
           generate_release_notes: true
+  release-failure-notification:
+    name: Release Failure Notification
+    needs: release
+    if: failure()
+    uses: ./.github/workflows/notify.yml
+    with:
+      outcome: failure
+      on_gateway_failure: warn
+      summary: Release failed after CI Main; inspect the release workflow run for intent and commit context.

@@ -38,9 +38,10 @@ names. GitHub Rulesets must require the same two contexts from GitHub Actions.
 - **Release**: consumes the validated merge intent after successful CI Main,
   creates a stable SemVer GitHub Release, deploys the Worker, records the
   release snapshot, and automatically promotes its reusable workflow SHA.
-- **Release Failure Notification**: reports release failures through Oidrune's
-  non-blocking notification policy and includes release intent, commit, and run
-  context.
+- **Release Failure Notification**: the failure job in `Release` reports
+  release failures through Oidrune's non-blocking notification policy and
+  includes release intent, commit, and run context. It uses the release's
+  six-hour prepared snapshot, never a mutable default-branch workflow ref.
 
 ## Release Durability
 

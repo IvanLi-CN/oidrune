@@ -115,10 +115,16 @@ export function registerAdminRoutes(app: Hono<AppBindings>): void {
     });
   });
 
+  app.get("/api/admin/audit", async (context) => {
+    return context.json({
+      entries: await new OidruneRepository(context.env.DB).listAudit(),
+    });
+  });
+
   app.post("/api/admin/events/:eventId/retry", async (context) => {
     confirmationBodySchema.parse(await readJson(context.req.raw));
     const repository = new OidruneRepository(context.env.DB);
-    const event = await repository.retryDeadLetter(
+    const event = await repository.beginDeadLetterRetry(
       context.req.param("eventId"),
       operator(context),
     );
@@ -129,7 +135,16 @@ export function registerAdminRoutes(app: Hono<AppBindings>): void {
         "The dead letter was not found.",
       );
     }
-    await context.env.DELIVERY_QUEUE.send({ eventId: event.id });
+    try {
+      await context.env.DELIVERY_QUEUE.send({ eventId: event.id });
+    } catch {
+      await repository.restoreDeadLetterRetry(event.id, operator(context));
+      throw new HttpProblem(
+        503,
+        "dead_letter_retry_unavailable",
+        "The dead letter remains available to retry.",
+      );
+    }
     return context.body(null, 202);
   });
 
