@@ -189,7 +189,15 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 
 ## Visual Evidence
 
-No visual evidence exists before UI implementation.
+The deterministic `ui_demo` uses mock data only and does not contact Cloudflare,
+Access, D1, Queues, or Telegram. Storybook is not applicable to this page-level
+console surface.
+
+- [Desktop Delivery and audit trail](./assets/console-delivery-desktop.png)
+- [Mobile Delivery and audit trail at 393x852 CSS px](./assets/console-delivery-mobile.png)
+
+This MVP adds the console surface, so `main` has no same-path visual baseline.
+The owner confirmed the current desktop and mobile renders.
 
 ## Related PRs
 
