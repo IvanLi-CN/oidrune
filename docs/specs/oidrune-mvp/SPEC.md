@@ -205,8 +205,8 @@ The owner confirmed the current desktop and mobile renders.
 
 ## 风险 / 开放问题 / 假设
 
-- Cloudflare Access, D1, Queue, Durable Object, and GitHub Ruleset alignment
-  are external configuration tasks and require separate deployment authority.
+- Cloudflare Access, D1, Queue, and Durable Object are external configuration
+  tasks and require separate deployment authority.
 - A Telegram bot must be added to the chosen group/channel with the permissions
   Telegram requires; private-chat recipients must start the bot first.
 - Callers are responsible for adding the no-secret final notification job; a

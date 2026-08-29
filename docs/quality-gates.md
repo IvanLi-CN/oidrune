@@ -30,9 +30,10 @@ names. GitHub Rulesets must require the same two contexts from GitHub Actions.
 - **CI PR**: runs for pull requests to `main` and `merge_group`; independent
   jobs are `Lint & Format Check`, `Typecheck`, `Unit Tests`, `Worker Build`,
   and `Console E2E`; the final `quality` job fails unless all predecessors pass.
-- **Label Gate**: runs from trusted workflow source on pull-request label
-  changes and validates exactly one `type:major`, `type:minor`, `type:patch`,
-  or `type:skip`, plus `channel:stable`.
+- **Label Gate**: runs from trusted workflow source when a pull request is
+  opened, synchronized, or its labels change. It validates exactly one
+  `type:major`, `type:minor`, `type:patch`, or `type:skip`, plus
+  `channel:stable`.
 - **CI Main**: runs the production-relevant checks after merge. It is not
   cancelable by later pushes.
 - **Release**: consumes the validated merge intent after successful CI Main,
