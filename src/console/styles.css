@@ -709,6 +709,31 @@ tr:last-child td {
   .table-wrap td span {
     overflow-wrap: anywhere;
   }
+  .audit-table th:nth-child(1) {
+    width: 40%;
+  }
+  .audit-table th:nth-child(2) {
+    width: 34%;
+  }
+  .audit-table th:nth-child(3) {
+    width: 26%;
+  }
+  .event-table th:nth-child(1) {
+    width: 32%;
+  }
+  .event-table th:nth-child(2) {
+    width: 22%;
+  }
+  .event-table th:nth-child(3) {
+    width: 31%;
+  }
+  .event-table th:nth-child(5) {
+    width: 15%;
+  }
+  .event-table .outcome,
+  .event-table .status {
+    white-space: nowrap;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-item,

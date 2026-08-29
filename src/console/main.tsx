@@ -775,7 +775,7 @@ function Delivery({
 
 function AuditTable({ entries }: { entries: AuditEntry[] }) {
   return (
-    <div className="table-wrap">
+    <div className="table-wrap audit-table">
       <table>
         <thead>
           <tr>
@@ -809,7 +809,7 @@ function EventTable({
   onRetry?: (event: DeliveryEvent) => void;
 }) {
   return (
-    <div className="table-wrap">
+    <div className="table-wrap event-table">
       <table>
         <thead>
           <tr>
