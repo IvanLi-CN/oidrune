@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "default_branch": "main",
+  "policy": {
+    "pull_request_only": true,
+    "signed_commits_required": true,
+    "full_sha_action_pinning_required": true,
+    "review_policy_required": false
+  },
+  "required_checks": ["quality", "Label Gate"],
+  "informational_checks": [],
+  "waivers": [],
+  "pull_request_workflows": {
+    "CI PR": [
+      "Lint & Format Check",
+      "Typecheck",
+      "Unit Tests",
+      "Worker Integration",
+      "Worker Build",
+      "Console E2E",
+      "quality"
+    ],
+    "Label Gate": ["Label Gate"]
+  },
+  "main_workflow": "CI Main",
+  "release_workflow": "Release"
+}

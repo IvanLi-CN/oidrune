@@ -4,7 +4,7 @@
 
 ## Current Status
 
-- Implementation: 未开始
+- Implementation: MVP source, validation suites, reusable workflow, and CI are implemented locally. External Cloudflare, Telegram, Access, and Ruleset provisioning remain intentionally unconfigured.
 - Lifecycle: active
 - Catalog note: 立项与 MVP 契约已确认，尚未初始化源码或外部资源。
 
@@ -70,8 +70,7 @@ docs/               product, ADR, quality contract, and Specs
 7. Add the declared CI, Label Gate, release snapshot/backfill, Release,
    deployment, and release-failure notification workflows.
 8. After explicit authorization, provision Cloudflare resources, configure
-   Access paths, set Worker Secrets, create the Telegram target, and align the
-   GitHub Ruleset with `docs/quality-gates.md`.
+   Access paths, set Worker Secrets, and create the Telegram target.
 
 ## Release Promotion Coverage
 
@@ -82,8 +81,8 @@ be backfilled without recalculating PR labels from mutable state.
 
 ## Remaining Gaps
 
-- No source, tests, migrations, Git repository, GitHub repository, Cloudflare
-  resource, Access application, Telegram bot, or secret has been created.
+- Cloudflare account resources, Access application, Telegram bot, and Worker
+  secrets remain external deployment work.
 - External provisioning values, including the actual `workers.dev` account
   subdomain and Telegram target, are intentionally deployment-time inputs.
 

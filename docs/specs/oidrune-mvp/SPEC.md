@@ -103,8 +103,9 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 1. A caller adds a final `notify` job that calls the full-SHA Oidrune reusable
    workflow with `id-token: write` and no `secrets:` block.
 2. The reusable workflow obtains a custom-audience OIDC JWT and submits a
-   small structured completion event. It fetches GitHub run metadata through
-   the automatic read-scoped `GITHUB_TOKEN`, not a configured secret.
+   small structured completion event. The caller passes its constrained
+   completion `outcome`; the workflow fetches GitHub run metadata through the
+   automatic read-scoped `GITHUB_TOKEN`, not a configured secret.
 3. The Worker rejects an invalid or replayed JWT before any enqueue operation.
    An admitted Source yields one normalized event, one queue message, and
    `202 Accepted`.
@@ -113,9 +114,11 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 5. An authenticated operator manages source policies, the one destination,
    trusted workflow releases, events, DLQ retry, and fixed test messages from
    the console.
-6. The Oidrune Release workflow tags and deploys a successful release, then
-   registers its own reusable workflow SHA as trusted. The console can revoke
-   or manually restore that trust record.
+6. The Oidrune Release workflow writes a six-hour prepared release snapshot,
+   tags and deploys a successful release, then registers its own reusable
+   workflow SHA as permanently trusted. Its failure-notification job may use
+   only that prepared SHA; the console can revoke or manually restore a
+   permanent trust record.
 
 ### Edge cases / errors
 
@@ -186,7 +189,15 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 
 ## Visual Evidence
 
-No visual evidence exists before UI implementation.
+The deterministic `ui_demo` uses mock data only and does not contact Cloudflare,
+Access, D1, Queues, or Telegram. Storybook is not applicable to this page-level
+console surface.
+
+- [Desktop Delivery and audit trail](./assets/console-delivery-desktop.png)
+- [Mobile Delivery and audit trail at 393x852 CSS px](./assets/console-delivery-mobile.png)
+
+This MVP adds the console surface, so `main` has no same-path visual baseline.
+The owner confirmed the current desktop and mobile renders.
 
 ## Related PRs
 
@@ -194,8 +205,8 @@ No visual evidence exists before UI implementation.
 
 ## 风险 / 开放问题 / 假设
 
-- Cloudflare Access, D1, Queue, Durable Object, and GitHub Ruleset alignment
-  are external configuration tasks and require separate deployment authority.
+- Cloudflare Access, D1, Queue, and Durable Object are external configuration
+  tasks and require separate deployment authority.
 - A Telegram bot must be added to the chosen group/channel with the permissions
   Telegram requires; private-chat recipients must start the bot first.
 - Callers are responsible for adding the no-secret final notification job; a

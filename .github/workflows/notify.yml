@@ -1,0 +1,74 @@
+name: Oidrune notify
+
+on:
+  workflow_call:
+    inputs:
+      outcome:
+        description: Completion outcome from the caller's final notification job.
+        required: true
+        type: string
+      on_gateway_failure:
+        description: Whether an exhausted gateway handoff fails only this notification job.
+        required: false
+        default: warn
+        type: string
+      summary:
+        description: Optional plain-text summary, normalized by Oidrune.
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  notify:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: none
+      id-token: write
+    env:
+      OIDRUNE_AUDIENCE: oidrune-gateway
+      OIDRUNE_GATEWAY_URL: https://oidrune-gateway.workers.dev/v1/events/workflow-completed
+      OUTCOME: ${{ inputs.outcome }}
+      SUMMARY: ${{ inputs.summary }}
+      ON_GATEWAY_FAILURE: ${{ inputs.on_gateway_failure }}
+    steps:
+      - name: Read run metadata
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          metadata="$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}")"
+          conclusion="$(jq -r '.conclusion // .status // "unknown"' <<<"${metadata}")"
+          printf 'conclusion=%s\n' "${conclusion}" >> "${GITHUB_OUTPUT}"
+      - name: Submit OIDC-authenticated handoff
+        run: |
+          set -euo pipefail
+          if [[ ! "${OUTCOME}" =~ ^(success|failure|cancelled|skipped)$ ]]; then
+            echo "::error::outcome must be success, failure, cancelled, or skipped"
+            exit 1
+          fi
+          token="$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${OIDRUNE_AUDIENCE}" | jq -r '.value')"
+          effective_summary="${SUMMARY:-GitHub Actions run conclusion: ${{ steps.run.outputs.conclusion }}}"
+          payload="$(jq -cn --arg outcome "${OUTCOME}" --arg summary "${effective_summary}" \
+            '{schema_version: 1, event_type: "workflow.completed", outcome: $outcome, summary: $summary}')"
+          status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --retry 3 --retry-all-errors --retry-delay 2 \
+            --request POST "${OIDRUNE_GATEWAY_URL}" \
+            --header "Authorization: Bearer ${token}" \
+            --header "Content-Type: application/json" \
+            --data "${payload}" || true)"
+          if [[ "${status}" == "202" ]]; then
+            exit 0
+          fi
+          if [[ "${ON_GATEWAY_FAILURE}" == "fail" ]]; then
+            echo "::error::Oidrune gateway handoff failed with HTTP ${status:-transport-error}"
+            exit 1
+          fi
+          echo "::warning::Oidrune gateway handoff failed with HTTP ${status:-transport-error}; continuing notification job"

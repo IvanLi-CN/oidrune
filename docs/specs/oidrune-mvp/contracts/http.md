@@ -59,6 +59,7 @@ as a GitHub Actions job, not a step. It requires no `secrets:` value.
 
 | Input | Required | Values | Default |
 | --- | --- | --- | --- |
+| `outcome` | Yes | `success`, `failure`, `cancelled`, `skipped` | — |
 | `on_gateway_failure` | No | `warn`, `fail` | `warn` |
 | `summary` | No | plain text, max 1,000 characters after normalization | empty |
 
@@ -82,3 +83,4 @@ identity in addition to Access path protection. Browser assets use the
 | Inspect deliveries | `GET /api/admin/events` | Filters never expose JWTs or raw bodies. |
 | Retry DLQ event | `POST /api/admin/events/{eventId}/retry` | Re-enqueues stored normalized content only. |
 | Send test | `POST /api/admin/test-message` | Fixed-format test only; requires confirmation. |
+| Inspect audit trail | `GET /api/admin/audit` | Returns operator changes and terminal delivery outcomes only. |

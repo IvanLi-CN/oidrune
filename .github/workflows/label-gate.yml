@@ -1,0 +1,23 @@
+name: Label Gate
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  label-gate:
+    name: Label Gate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const labels = context.payload.pull_request.labels.map((label) => label.name);
+            const releaseLabels = labels.filter((label) => ["type:major", "type:minor", "type:patch", "type:skip"].includes(label));
+            const channels = labels.filter((label) => label === "channel:stable");
+            if (releaseLabels.length !== 1 || channels.length !== 1) {
+              core.setFailed("PR must have exactly one type:major/type:minor/type:patch/type:skip label and channel:stable.");
+            }
