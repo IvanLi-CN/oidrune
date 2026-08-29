@@ -4,7 +4,7 @@
 
 ## Current Status
 
-- Implementation: MVP source, validation suites, reusable workflow, and CI are implemented locally. External Cloudflare, Telegram, Access, and Ruleset provisioning remain intentionally unconfigured.
+- Implementation: MVP source, validation suites, reusable workflow, and CI are implemented locally. Production Cloudflare, Telegram, Access, and Ruleset values are deployment-time configuration.
 - Lifecycle: active
 - Catalog note: 立项与 MVP 契约已确认，尚未初始化源码或外部资源。
 
@@ -51,7 +51,7 @@ docs/               product, ADR, quality contract, and Specs
 | Queue + DLQ | At-least-once handoff and bounded Telegram delivery retries. |
 | Durable Object | Atomic JWT `jti` replay reservation until token expiry. |
 | Worker Secrets | Telegram Bot Token and deployment-only secrets; never browser-readable. |
-| Cloudflare Access | Account-member gate for `/console/*` and `/api/admin/*` on `workers.dev`. |
+| Cloudflare Access | Account-member gate for `/console*` and `/api/admin*` on `oidrune.707979.xyz`; public ingress remains outside Access. |
 
 ## Planned Implementation Sequence
 
@@ -83,8 +83,8 @@ be backfilled without recalculating PR labels from mutable state.
 
 - Cloudflare account resources, Access application, Telegram bot, and Worker
   secrets remain external deployment work.
-- External provisioning values, including the actual `workers.dev` account
-  subdomain and Telegram target, are intentionally deployment-time inputs.
+- External provisioning values, including the D1 identifier, Access audience and
+  team domain, and Telegram target, are intentionally deployment-time inputs.
 
 ## Related Changes
 

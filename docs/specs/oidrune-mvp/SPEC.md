@@ -39,15 +39,20 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 ### Out of scope
 
 - 多租户、按调用方选择的 Telegram chat、动态模板语言和任意内容发送。
-- 迁入自定义域名；首版仅使用 `workers.dev`。
 
 ## Related ADRs
 
 - [GitHub OIDC for Secretless Repository Ingress](../../adr/0001-github-oidc-for-secretless-ingress.md)
 - [Durable Asynchronous Delivery](../../adr/0002-durable-asynchronous-delivery.md)
 - [Access-Protected Operator Console and D1 Policy Store](../../adr/0003-access-protected-operator-console.md)
+- [Custom Domain and Path-Level Access](../../adr/0004-custom-domain-path-access.md)
 
 ## 需求（Requirements）
+
+- 生产 Worker MUST use the `oidrune.707979.xyz` Custom Domain with
+  `workers.dev` disabled. `/v1/events/workflow-completed` remains publicly
+  reachable for GitHub OIDC, while `/console*` and `/api/admin*` are protected
+  by path-level Cloudflare Access.
 
 ### MUST
 
@@ -89,12 +94,12 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - Event summaries SHOULD be normalized to plain text and capped at 1,000
   characters before persistence or Telegram formatting.
 - The Worker SHOULD use a stable opaque OIDC audience independent of the
-  `workers.dev` hostname.
+  production hostname.
 
 ### COULD
 
 - Later versions may add adapter interfaces for other delivery platforms,
-  custom domains, multiple environments, or a GitHub App ingress.
+  multiple environments, or a GitHub App ingress.
 
 ## 功能与行为规格
 
@@ -218,4 +223,4 @@ The owner confirmed the current desktop and mobile renders.
 - [GitHub reusable workflows](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows)
 - [Cloudflare Access for Workers](https://developers.cloudflare.com/workers/configuration/cloudflare-access/)
 - [Cloudflare Workers Vite plugin](https://developers.cloudflare.com/workers/vite-plugin/)
-- [Cloudflare `workers.dev`](https://developers.cloudflare.com/workers/configuration/routing/workers-dev/)
+- [Cloudflare Custom Domains](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/)

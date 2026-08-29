@@ -39,6 +39,20 @@ jobs:
         with:
           ref: ${{ steps.commit.outputs.sha }}
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - name: Validate production configuration
+        env:
+          ACCESS_AUD: ${{ vars.OIDRUNE_ACCESS_AUD }}
+          ACCESS_TEAM_DOMAIN: ${{ vars.OIDRUNE_ACCESS_TEAM_DOMAIN }}
+        run: |
+          set -euo pipefail
+          if grep -q '00000000-0000-0000-0000-000000000000' wrangler.jsonc; then
+            echo 'D1 database_id is still the unprovisioned placeholder.' >&2
+            exit 1
+          fi
+          if [[ -z "${ACCESS_AUD}" || -z "${ACCESS_TEAM_DOMAIN}" ]]; then
+            echo 'OIDRUNE_ACCESS_AUD and OIDRUNE_ACCESS_TEAM_DOMAIN repository variables are required.' >&2
+            exit 1
+          fi
       - name: Resolve immutable release intent
         id: intent
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
@@ -54,6 +68,11 @@ jobs:
             return intent[0];
         env:
           MERGE_SHA: ${{ steps.commit.outputs.sha }}
+      - name: Apply D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bunx --bun wrangler@4.127.1 d1 migrations apply oidrune --remote
       - name: Prepare release notification authority
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -68,7 +87,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
+          command: deploy --var ACCESS_AUD:${{ vars.OIDRUNE_ACCESS_AUD }} --var ACCESS_TEAM_DOMAIN:${{ vars.OIDRUNE_ACCESS_TEAM_DOMAIN }}
       - name: Promote trusted reusable workflow release
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
