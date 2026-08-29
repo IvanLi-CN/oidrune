@@ -103,8 +103,9 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 1. A caller adds a final `notify` job that calls the full-SHA Oidrune reusable
    workflow with `id-token: write` and no `secrets:` block.
 2. The reusable workflow obtains a custom-audience OIDC JWT and submits a
-   small structured completion event. It fetches GitHub run metadata through
-   the automatic read-scoped `GITHUB_TOKEN`, not a configured secret.
+   small structured completion event. The caller passes its constrained
+   completion `outcome`; the workflow fetches GitHub run metadata through the
+   automatic read-scoped `GITHUB_TOKEN`, not a configured secret.
 3. The Worker rejects an invalid or replayed JWT before any enqueue operation.
    An admitted Source yields one normalized event, one queue message, and
    `202 Accepted`.

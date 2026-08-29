@@ -59,6 +59,7 @@ as a GitHub Actions job, not a step. It requires no `secrets:` value.
 
 | Input | Required | Values | Default |
 | --- | --- | --- | --- |
+| `outcome` | Yes | `success`, `failure`, `cancelled`, `skipped` | — |
 | `on_gateway_failure` | No | `warn`, `fail` | `warn` |
 | `summary` | No | plain text, max 1,000 characters after normalization | empty |
 
