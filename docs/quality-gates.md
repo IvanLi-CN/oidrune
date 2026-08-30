@@ -10,9 +10,9 @@ policy aligned.
 - Default branch: `main`.
 - `main` is PR-only; direct pushes are disallowed.
 - All commits that reach `main` require verified signatures.
-- GitHub Actions and reusable workflows are pinned to full commit SHAs.
-- No review-policy workflow is required for the single-operator MVP. This is an
-  explicit absence, not a bypass of required status checks.
+- GitHub Actions and reusable workflows are pinned to full commit SHAs, and the
+  GitHub Actions platform policy must reject non-SHA references.
+- Pull requests created by owners or project members do not require approval.
 
 ## Required Checks
 
@@ -28,12 +28,14 @@ names. GitHub Rulesets must require the same two contexts from GitHub Actions.
 ## Workflow Topology
 
 - **CI PR**: runs for pull requests to `main` and `merge_group`; independent
-  jobs are `Lint & Format Check`, `Typecheck`, `Unit Tests`, `Worker Build`,
-  and `Console E2E`; the final `quality` job fails unless all predecessors pass.
+  jobs are `Lint & Format Check`, `Typecheck`, `Unit Tests`, `Worker
+  Integration`, `Dependency vulnerability scan`, `Worker Build`, and `Console
+  E2E`; the final `quality` job fails unless all predecessors pass.
 - **Label Gate**: runs from trusted workflow source when a pull request is
-  opened, synchronized, or its labels change. It validates exactly one
-  `type:major`, `type:minor`, `type:patch`, or `type:skip`, plus
-  `channel:stable`.
+  opened, synchronized, or its labels change, and for `merge_group` checks. It
+  resolves queue members through GitHub metadata and fails closed when that
+  membership cannot be proven. Every member must have exactly one `type:major`,
+  `type:minor`, `type:patch`, or `type:skip`, plus `channel:stable`.
 - **CI Main**: runs the production-relevant checks after merge. It is not
   cancelable by later pushes.
 - **Release**: consumes the validated merge intent after successful CI Main,
@@ -42,15 +44,17 @@ names. GitHub Rulesets must require the same two contexts from GitHub Actions.
 - **Release Failure Notification**: the failure job in `Release` reports
   release failures through Oidrune's non-blocking notification policy and
   sends its caller-provided failure summary. Structured release intent, commit,
-  and run context remain in the workflow and Oidrune audit records. It uses the
-  release's six-hour prepared snapshot, never a mutable default-branch workflow
-  ref.
+  and run context remain in the workflow and Oidrune audit records. It uses a
+  separately pinned, permanently trusted reusable workflow SHA; a prepared
+  snapshot never grants ingress authority.
 
 ## Release Durability
 
 Release intent is snapshotted by merge commit. A durable release record or
 queue supports serialized processing, manual backfill by commit SHA, and
 retrying a failed release without guessing labels from a changed PR head.
+Prepared and failed snapshots are release metadata only. They never authorize
+a reusable workflow SHA, and a release failure closes a prepared snapshot.
 
 ## Alignment Gate
 

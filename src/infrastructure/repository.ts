@@ -69,21 +69,13 @@ export class OidruneRepository {
   }
 
   async isTrustedWorkflowRelease(sha: string): Promise<boolean> {
-    const [trusted, prepared] = await Promise.all([
-      this.db
-        .prepare(
-          "SELECT sha FROM trusted_workflow_releases WHERE sha = ? AND revoked_at IS NULL",
-        )
-        .bind(sha)
-        .first<{ sha: string }>(),
-      this.db
-        .prepare(
-          "SELECT workflow_sha FROM release_snapshots WHERE workflow_sha = ? AND status = 'prepared' AND created_at >= datetime('now', '-6 hours')",
-        )
-        .bind(sha)
-        .first<{ workflow_sha: string }>(),
-    ]);
-    return trusted !== null || prepared !== null;
+    const trusted = await this.db
+      .prepare(
+        "SELECT sha FROM trusted_workflow_releases WHERE sha = ? AND revoked_at IS NULL",
+      )
+      .bind(sha)
+      .first<{ sha: string }>();
+    return trusted !== null;
   }
 
   async getDestination(): Promise<DestinationRow | null> {
@@ -285,39 +277,74 @@ export class OidruneRepository {
     return row ? mapEvent(row) : null;
   }
 
-  async markDelivered(eventId: string): Promise<void> {
+  async claimDelivery(eventId: string): Promise<string | null> {
+    const claimId = crypto.randomUUID();
+    const claimedAt = now();
+    const leaseExpiresAt = inSeconds(300);
+    const result = await this.db
+      .prepare(
+        `INSERT INTO delivery_claims (event_id, claim_id, claimed_at, lease_expires_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(event_id) DO UPDATE SET claim_id = excluded.claim_id,
+           claimed_at = excluded.claimed_at, lease_expires_at = excluded.lease_expires_at
+         WHERE delivery_claims.lease_expires_at <= ?`,
+      )
+      .bind(eventId, claimId, claimedAt, leaseExpiresAt, claimedAt)
+      .run();
+    return result.meta.changes === 1 ? claimId : null;
+  }
+
+  async markDelivered(eventId: string, claimId: string): Promise<void> {
     const deliveredAt = now();
     const expiresAt = inDays(30);
-    await this.db
-      .prepare(
-        "UPDATE notification_events SET status = 'delivered', delivered_at = ?, expires_at = ? WHERE id = ?",
-      )
-      .bind(deliveredAt, expiresAt, eventId)
-      .run();
-  }
-
-  async markRetrying(eventId: string): Promise<void> {
-    await this.db
-      .prepare(
-        "UPDATE notification_events SET status = 'retrying' WHERE id = ?",
-      )
-      .bind(eventId)
-      .run();
-  }
-
-  async markDeadLetter(eventId: string, reason: string): Promise<void> {
     await this.db.batch([
       this.db
         .prepare(
-          "UPDATE notification_events SET status = 'dead_letter', expires_at = ? WHERE id = ?",
+          `UPDATE notification_events SET status = 'delivered', delivered_at = ?, expires_at = ?
+           WHERE id = ? AND EXISTS (
+             SELECT 1 FROM delivery_claims WHERE event_id = ? AND claim_id = ?
+           )`,
         )
-        .bind(inDays(90), eventId),
+        .bind(deliveredAt, expiresAt, eventId, eventId, claimId),
+      this.releaseDeliveryClaimStatement(eventId, claimId),
+    ]);
+  }
+
+  async markRetrying(eventId: string, claimId: string): Promise<void> {
+    await this.db.batch([
+      this.db
+        .prepare(
+          `UPDATE notification_events SET status = 'retrying'
+           WHERE id = ? AND EXISTS (
+             SELECT 1 FROM delivery_claims WHERE event_id = ? AND claim_id = ?
+           )`,
+        )
+        .bind(eventId, eventId, claimId),
+      this.releaseDeliveryClaimStatement(eventId, claimId),
+    ]);
+  }
+
+  async markDeadLetter(
+    eventId: string,
+    claimId: string,
+    reason: string,
+  ): Promise<void> {
+    await this.db.batch([
+      this.db
+        .prepare(
+          `UPDATE notification_events SET status = 'dead_letter', expires_at = ?
+           WHERE id = ? AND EXISTS (
+             SELECT 1 FROM delivery_claims WHERE event_id = ? AND claim_id = ?
+           )`,
+        )
+        .bind(inDays(90), eventId, eventId, claimId),
       this.db
         .prepare(
           `INSERT INTO dead_letters (event_id, reason, failed_at) VALUES (?, ?, ?)
              ON CONFLICT(event_id) DO UPDATE SET reason = excluded.reason, failed_at = excluded.failed_at`,
         )
         .bind(eventId, reason, now()),
+      this.releaseDeliveryClaimStatement(eventId, claimId),
     ]);
   }
 
@@ -475,6 +502,17 @@ export class OidruneRepository {
       )
       .bind(crypto.randomUUID(), actor, action, subject, detail, now());
   }
+
+  private releaseDeliveryClaimStatement(
+    eventId: string,
+    claimId: string,
+  ): D1PreparedStatement {
+    return this.db
+      .prepare(
+        "DELETE FROM delivery_claims WHERE event_id = ? AND claim_id = ?",
+      )
+      .bind(eventId, claimId);
+  }
 }
 
 function mapEvent(row: EventRow): NotificationEvent {
@@ -511,4 +549,8 @@ function inDays(days: number): string {
   const value = new Date();
   value.setUTCDate(value.getUTCDate() + days);
   return value.toISOString();
+}
+
+function inSeconds(seconds: number): string {
+  return new Date(Date.now() + seconds * 1_000).toISOString();
 }

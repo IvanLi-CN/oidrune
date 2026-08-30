@@ -9,6 +9,8 @@
   `workflow.completed` contract. Callers do not inherit secrets from Oidrune.
 - A Trusted Workflow Release may be revoked when its behavior is unsafe;
   affected callers must upgrade to another approved SHA.
+- Prepared and failed release snapshots retain release-processing state only;
+  they never restore a revoked Trusted Workflow Release.
 
 ## Replacements / Background
 
