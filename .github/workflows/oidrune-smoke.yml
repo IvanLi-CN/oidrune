@@ -30,7 +30,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in {1..12}; do
-            result="$(bunx --bun wrangler@4.127.1 d1 execute oidrune --remote --json --command "SELECT status, summary FROM events WHERE run_id = '${GITHUB_RUN_ID}' AND summary = '${SMOKE_SUMMARY}' ORDER BY received_at DESC LIMIT 1")"
+            result="$(bunx --bun wrangler@4.127.1 d1 execute oidrune --remote --json --command "SELECT status, summary FROM notification_events WHERE run_id = '${GITHUB_RUN_ID}' AND summary = '${SMOKE_SUMMARY}' ORDER BY received_at DESC LIMIT 1")"
             status="$(jq -r '.[0].results[0].status // empty' <<<"${result}")"
             summary="$(jq -r '.[0].results[0].summary // empty' <<<"${result}")"
             if [[ "${status}" == "delivered" && "${summary}" == "${SMOKE_SUMMARY}" ]]; then
