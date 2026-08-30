@@ -82,6 +82,8 @@ jobs:
         run: |
           bunx --bun wrangler@4.127.1 d1 execute oidrune --remote --command "INSERT INTO release_snapshots (merge_commit_sha, release_intent, workflow_sha, status, created_at, updated_at) VALUES ('${MERGE_SHA}', '${INTENT}', '${MERGE_SHA}', 'prepared', datetime('now'), datetime('now')) ON CONFLICT(merge_commit_sha) DO UPDATE SET release_intent=excluded.release_intent, workflow_sha=excluded.workflow_sha, status='prepared', updated_at=excluded.updated_at"
       - run: bun install --frozen-lockfile
+      - name: Build Console assets
+        run: bun run build
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd
         with:
