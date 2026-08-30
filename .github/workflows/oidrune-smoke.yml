@@ -29,11 +29,17 @@ jobs:
       - name: Assert durable Telegram delivery
         run: |
           set -euo pipefail
-          result="$(bunx --bun wrangler@4.127.1 d1 execute oidrune --remote --json --command "SELECT status, summary FROM events WHERE run_id = '${GITHUB_RUN_ID}' AND summary = '${SMOKE_SUMMARY}' ORDER BY received_at DESC LIMIT 1")"
-          status="$(jq -r '.[0].results[0].status // empty' <<<"${result}")"
-          summary="$(jq -r '.[0].results[0].summary // empty' <<<"${result}")"
-          if [[ "${status}" != "delivered" || "${summary}" != "${SMOKE_SUMMARY}" ]]; then
-            echo "::error::The smoke event was not durably delivered with the caller-provided body."
-            exit 1
-          fi
-          echo "Smoke event delivered with the caller-provided body."
+          for attempt in {1..12}; do
+            result="$(bunx --bun wrangler@4.127.1 d1 execute oidrune --remote --json --command "SELECT status, summary FROM events WHERE run_id = '${GITHUB_RUN_ID}' AND summary = '${SMOKE_SUMMARY}' ORDER BY received_at DESC LIMIT 1")"
+            status="$(jq -r '.[0].results[0].status // empty' <<<"${result}")"
+            summary="$(jq -r '.[0].results[0].summary // empty' <<<"${result}")"
+            if [[ "${status}" == "delivered" && "${summary}" == "${SMOKE_SUMMARY}" ]]; then
+              echo "Smoke event delivered with the caller-provided body."
+              exit 0
+            fi
+            if [[ "${attempt}" -lt 12 ]]; then
+              sleep 5
+            fi
+          done
+          echo "::error::The smoke event was not durably delivered with the caller-provided body within 60 seconds."
+          exit 1
