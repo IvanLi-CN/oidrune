@@ -4,9 +4,9 @@
 
 ### `POST /v1/events/workflow-completed`
 
-This endpoint is publicly reachable at
-`https://oidrune.707979.xyz/v1/events/workflow-completed`. It is not anonymously
-usable; GitHub OIDC is the endpoint authentication mechanism.
+Each Default Gateway exposes this endpoint at its Public Protocol Endpoint. It
+is not anonymously usable; GitHub OIDC is the endpoint authentication
+mechanism.
 
 **Request requirements**
 
@@ -48,8 +48,9 @@ exits successfully after retry exhaustion; `fail` exits unsuccessfully.
 
 ## Reusable Workflow
 
-`IvanLi-CN/oidrune/.github/workflows/notify.yml@<full-commit-sha>` is called
-as a GitHub Actions job, not a step. It requires no `secrets:` value.
+`<owner>/<repository>/.github/workflows/notify.yml@<full-commit-sha>` is called
+as a GitHub Actions job, not a step. The owner/repository may be the upstream
+project or a deployment fork, and it requires no `secrets:` value.
 
 **Caller requirements**
 
@@ -65,9 +66,16 @@ as a GitHub Actions job, not a step. It requires no `secrets:` value.
 | `outcome` | Yes | `success`, `failure`, `cancelled`, `skipped` | — |
 | `on_gateway_failure` | No | `warn`, `fail` | `warn` |
 | `summary` | Yes | complete plain-text caller body, max 1,000 characters after normalization | — |
+| `gateway_url` | No | HTTPS Public Protocol Endpoint | Default Gateway |
+| `oidc_audience` | No | opaque audience for `gateway_url` | Default Gateway audience |
 
-No input selects a destination, audience, owner, repository, Token, Bot, or
-workflow release.
+`gateway_url` and `oidc_audience` MUST be supplied together. The endpoint MUST
+use HTTPS, have the exact `/v1/events/workflow-completed` path, and contain no
+credentials, query parameters, or fragment. An explicit pair takes precedence
+over the caller repository Variables `OIDRUNE_GATEWAY_URL` and
+`OIDRUNE_OIDC_AUDIENCE`; a complete Variables pair takes precedence over the
+Default Gateway. No input selects a destination, owner, repository, Token, Bot,
+or workflow release.
 
 ## Administrator API
 

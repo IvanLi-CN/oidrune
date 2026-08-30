@@ -1,6 +1,5 @@
 export const OIDRUNE_AUDIENCE = "oidrune-gateway";
 export const GITHUB_OIDC_ISSUER = "https://token.actions.githubusercontent.com";
-export const TRUSTED_WORKFLOW_REPOSITORY = "IvanLi-CN/oidrune";
 export const TRUSTED_WORKFLOW_PATH = ".github/workflows/notify.yml";
 export const ACCEPTED_EVENTS = new Set([
   "push",

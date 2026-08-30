@@ -25,8 +25,37 @@ Owner Allowlist or its repository ID is in the Repository Allowlist.
 _Avoid_: Authentication
 
 **Trusted Workflow Release**:
-An approved immutable commit SHA of Oidrune's reusable notification workflow.
+An approved immutable commit SHA of a compatible Oidrune reusable notification
+workflow, whether distributed upstream or released by a self-hosted fork.
 _Avoid_: Main branch, latest workflow
+
+## Gateway Selection
+
+**Default Gateway**:
+The Oidrune-operated public gateway selected when a notification caller does
+not choose another compatible gateway.
+_Avoid_: Production node, hard-coded endpoint
+
+**Public Protocol Endpoint**:
+The stable HTTPS address through which a Default Gateway accepts authenticated
+notification handoffs; it identifies a protocol surface, not its provider
+resources or backing node.
+_Avoid_: Private deployment address
+
+**Gateway Override**:
+A caller-selected compatible gateway that replaces the Default Gateway for one
+notification workflow invocation.
+_Avoid_: Fork-specific configuration
+
+**Gateway Selection Pair**:
+An HTTPS Public Protocol Endpoint and its OIDC audience, treated as one
+indivisible selection of a compatible gateway.
+_Avoid_: Partial override
+
+**Fork Deployment**:
+An independently operated Oidrune gateway built from a fork and configured
+with its own Cloudflare resources and Public Protocol Endpoint.
+_Avoid_: Tenant
 
 ## Notification Lifecycle
 

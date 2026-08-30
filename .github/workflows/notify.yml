@@ -16,6 +16,16 @@ on:
         description: Complete caller-provided Telegram body, normalized by Oidrune.
         required: true
         type: string
+      gateway_url:
+        description: Optional HTTPS gateway endpoint override.
+        required: false
+        default: ""
+        type: string
+      oidc_audience:
+        description: Optional OIDC audience paired with gateway_url.
+        required: false
+        default: ""
+        type: string
 
 jobs:
   notify:
@@ -25,8 +35,12 @@ jobs:
       contents: none
       id-token: write
     env:
-      OIDRUNE_AUDIENCE: oidrune-gateway
-      OIDRUNE_GATEWAY_URL: https://oidrune.707979.xyz/v1/events/workflow-completed
+      DEFAULT_OIDC_AUDIENCE: oidrune-gateway
+      DEFAULT_GATEWAY_URL: https://oidrune.707979.xyz/v1/events/workflow-completed
+      INPUT_OIDC_AUDIENCE: ${{ inputs.oidc_audience }}
+      INPUT_GATEWAY_URL: ${{ inputs.gateway_url }}
+      VARIABLE_OIDC_AUDIENCE: ${{ vars.OIDRUNE_OIDC_AUDIENCE }}
+      VARIABLE_GATEWAY_URL: ${{ vars.OIDRUNE_GATEWAY_URL }}
       OUTCOME: ${{ inputs.outcome }}
       SUMMARY: ${{ inputs.summary }}
       ON_GATEWAY_FAILURE: ${{ inputs.on_gateway_failure }}
@@ -42,9 +56,55 @@ jobs:
             echo "::error::summary must be provided by the caller"
             exit 1
           fi
+          if [[ -n "${INPUT_GATEWAY_URL}" || -n "${INPUT_OIDC_AUDIENCE}" ]]; then
+            if [[ -z "${INPUT_GATEWAY_URL}" || -z "${INPUT_OIDC_AUDIENCE}" ]]; then
+              echo "::error::gateway_url and oidc_audience must be provided together"
+              exit 1
+            fi
+            OIDRUNE_GATEWAY_URL="${INPUT_GATEWAY_URL}"
+            OIDRUNE_AUDIENCE="${INPUT_OIDC_AUDIENCE}"
+          elif [[ -n "${VARIABLE_GATEWAY_URL}" || -n "${VARIABLE_OIDC_AUDIENCE}" ]]; then
+            if [[ -z "${VARIABLE_GATEWAY_URL}" || -z "${VARIABLE_OIDC_AUDIENCE}" ]]; then
+              echo "::error::OIDRUNE_GATEWAY_URL and OIDRUNE_OIDC_AUDIENCE variables must be provided together"
+              exit 1
+            fi
+            OIDRUNE_GATEWAY_URL="${VARIABLE_GATEWAY_URL}"
+            OIDRUNE_AUDIENCE="${VARIABLE_OIDC_AUDIENCE}"
+          else
+            OIDRUNE_GATEWAY_URL="${DEFAULT_GATEWAY_URL}"
+            OIDRUNE_AUDIENCE="${DEFAULT_OIDC_AUDIENCE}"
+          fi
+          if ! node -e '
+            const value = process.argv[1];
+            try {
+              const url = new URL(value);
+              if (
+                url.protocol !== "https:" ||
+                url.username ||
+                url.password ||
+                url.search ||
+                url.hash ||
+                value.includes("?") ||
+                value.includes("#") ||
+                url.pathname !== "/v1/events/workflow-completed"
+              ) {
+                process.exit(1);
+              }
+            } catch {
+              process.exit(1);
+            }
+          ' "${OIDRUNE_GATEWAY_URL}"; then
+            echo "::error::gateway URL must be an HTTPS endpoint with the exact workflow-completed path and no credentials, query, or fragment"
+            exit 1
+          fi
+          if [[ -z "${OIDRUNE_AUDIENCE}" ]]; then
+            echo "::error::OIDC audience must not be empty"
+            exit 1
+          fi
           token="$(curl --fail --silent --show-error \
             --header "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${OIDRUNE_AUDIENCE}" | jq -r '.value')"
+            --get --data-urlencode "audience=${OIDRUNE_AUDIENCE}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}" | jq -r '.value')"
           payload="$(jq -cn --arg outcome "${OUTCOME}" --arg summary "${SUMMARY}" \
             '{schema_version: 1, event_type: "workflow.completed", outcome: $outcome, summary: $summary}')"
           status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \

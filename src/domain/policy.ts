@@ -1,8 +1,4 @@
-import {
-  ACCEPTED_EVENTS,
-  TRUSTED_WORKFLOW_PATH,
-  TRUSTED_WORKFLOW_REPOSITORY,
-} from "../shared/constants";
+import { ACCEPTED_EVENTS, TRUSTED_WORKFLOW_PATH } from "../shared/constants";
 import type { GitHubClaims } from "./types";
 
 export interface SourcePolicy {
@@ -23,8 +19,24 @@ export function admitsSource(
 export function hasTrustedWorkflowReference(
   claims: Pick<GitHubClaims, "job_workflow_ref" | "job_workflow_sha">,
 ): boolean {
-  const expectedReference = `${TRUSTED_WORKFLOW_REPOSITORY}/${TRUSTED_WORKFLOW_PATH}@${claims.job_workflow_sha}`;
-  return claims.job_workflow_ref === expectedReference;
+  const pathMarker = `/${TRUSTED_WORKFLOW_PATH}@`;
+  const markerIndex = claims.job_workflow_ref.lastIndexOf(pathMarker);
+  if (markerIndex <= 0) {
+    return false;
+  }
+
+  const repository = claims.job_workflow_ref.slice(0, markerIndex);
+  const workflowSha = claims.job_workflow_ref.slice(
+    markerIndex + pathMarker.length,
+  );
+  const repositoryParts = repository.split("/");
+
+  return (
+    repositoryParts.length === 2 &&
+    repositoryParts.every((part) => part.length > 0) &&
+    /^[a-f0-9]{40}$/.test(workflowSha) &&
+    workflowSha === claims.job_workflow_sha
+  );
 }
 
 export function satisfiesRuntimePolicy(

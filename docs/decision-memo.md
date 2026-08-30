@@ -5,9 +5,9 @@
 - **Deliverable**: a public GitHub Actions reusable workflow, an
   OIDC-authenticated Cloudflare Worker notification gateway, and a protected
   React operator console.
-- **Runtime**: one production Cloudflare Worker on the `oidrune.707979.xyz`
-  Custom Domain, with D1, Queues, Durable Objects, and path-based Cloudflare
-  Access.
+- **Runtime**: one production Cloudflare Worker on an operator-configured
+  Public Protocol Endpoint, with D1, Queues, Durable Objects, and path-based
+  Cloudflare Access.
 - **Primary risks**: accepting forged notifications, leaking Telegram
   credentials, silently losing delivery failures, and allowing notification
   errors to affect a completed release.

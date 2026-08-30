@@ -2,6 +2,17 @@ name: Oidrune smoke
 
 on:
   workflow_dispatch:
+    inputs:
+      gateway_url:
+        description: Optional paired gateway endpoint override.
+        required: false
+        type: string
+        default: ""
+      oidc_audience:
+        description: Optional paired OIDC audience override.
+        required: false
+        type: string
+        default: ""
 
 permissions:
   id-token: write
@@ -13,6 +24,8 @@ jobs:
       outcome: success
       on_gateway_failure: fail
       summary: Oidrune release smoke test
+      gateway_url: ${{ inputs.gateway_url }}
+      oidc_audience: ${{ inputs.oidc_audience }}
 
   verify-delivery:
     needs: notify
