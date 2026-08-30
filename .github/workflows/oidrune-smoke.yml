@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   notify:
-    uses: IvanLi-CN/oidrune/.github/workflows/notify.yml@d8981652bb80f52178f9fe6cadd4dd62233a9018
+    uses: IvanLi-CN/oidrune/.github/workflows/notify.yml@911fca0a455f4bbef4b316d21eb7001eedcdc651
     with:
       outcome: success
       on_gateway_failure: fail
