@@ -28,7 +28,7 @@ jobs:
       id-token: write
     env:
       OIDRUNE_AUDIENCE: oidrune-gateway
-      OIDRUNE_GATEWAY_URL: https://oidrune-gateway.workers.dev/v1/events/workflow-completed
+      OIDRUNE_GATEWAY_URL: https://oidrune.707979.xyz/v1/events/workflow-completed
       OUTCOME: ${{ inputs.outcome }}
       SUMMARY: ${{ inputs.summary }}
       ON_GATEWAY_FAILURE: ${{ inputs.on_gateway_failure }}

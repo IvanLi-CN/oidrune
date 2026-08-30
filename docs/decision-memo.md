@@ -5,8 +5,9 @@
 - **Deliverable**: a public GitHub Actions reusable workflow, an
   OIDC-authenticated Cloudflare Worker notification gateway, and a protected
   React operator console.
-- **Runtime**: one production Cloudflare Worker on its `workers.dev` hostname,
-  with D1, Queues, Durable Objects, and Cloudflare Access.
+- **Runtime**: one production Cloudflare Worker on the `oidrune.707979.xyz`
+  Custom Domain, with D1, Queues, Durable Objects, and path-based Cloudflare
+  Access.
 - **Primary risks**: accepting forged notifications, leaking Telegram
   credentials, silently losing delivery failures, and allowing notification
   errors to affect a completed release.
@@ -32,8 +33,9 @@ source, normalizes the event, records it, and enqueues it before responding
 `202 Accepted`.
 
 The console is protected by path-based Cloudflare Access using Cloudflare
-account membership. It uses D1 for dynamic policy and audit records; the
-Telegram Bot Token remains a Worker Secret and is never returned by an API.
+account membership. The public OIDC ingress remains outside those protected
+paths. It uses D1 for dynamic policy and audit records; the Telegram Bot Token
+remains a Worker Secret and is never returned by an API.
 
 ## Alternatives
 

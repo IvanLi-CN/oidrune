@@ -19,8 +19,9 @@ permission.
 - Durable acceptance, automatic Telegram retry, DLQ, and an operator console.
 - Cloudflare Access authentication for the console and administrator APIs.
 
-The first deployment uses the account-provided `workers.dev` hostname. No
-personal domain needs to move to Cloudflare.
+Production uses the Cloudflare Custom Domain `oidrune.707979.xyz`. The public
+OIDC ingress remains reachable at `/v1/events/workflow-completed`; Cloudflare
+Access protects only the `/console*` and `/api/admin*` paths.
 
 ## Project Truth
 
@@ -38,9 +39,11 @@ quality aggregate, or the focused `check`, `typecheck`, `test:unit`,
 `test:integration`, and `test:e2e` scripts. The console demo is deterministic
 and does not call Cloudflare Access, D1, Queues, or Telegram.
 
-Provision Cloudflare resources and Worker secrets only during the separately
-authorized deployment phase. `wrangler.jsonc` contains no real account,
-database, queue, destination, or Access configuration.
+Provision the dedicated Cloudflare D1, queues, Custom Domain, Access
+application, and Worker Secrets only during the separately authorized
+deployment phase. The D1 database ID is the one deployment-time value kept in
+`wrangler.jsonc`; destination metadata and Access runtime values remain outside
+the source tree.
 
 ## License
 

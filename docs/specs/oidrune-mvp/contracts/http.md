@@ -4,8 +4,9 @@
 
 ### `POST /v1/events/workflow-completed`
 
-This endpoint is publicly reachable on the Oidrune `workers.dev` host. It is
-not anonymously usable.
+This endpoint is publicly reachable at
+`https://oidrune.707979.xyz/v1/events/workflow-completed`. It is not anonymously
+usable; GitHub OIDC is the endpoint authentication mechanism.
 
 **Request requirements**
 

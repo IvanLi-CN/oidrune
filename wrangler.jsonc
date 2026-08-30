@@ -2,8 +2,13 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "oidrune",
   "main": "src/worker/index.ts",
+  "workers_dev": false,
   "compatibility_date": "2026-08-22",
   "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "OIDC_AUDIENCE": "oidrune-gateway"
+  },
+  "routes": [{ "pattern": "oidrune.707979.xyz", "custom_domain": true }],
   "assets": {
     "directory": "./dist/client",
     "binding": "ASSETS",
@@ -13,7 +18,7 @@
     {
       "binding": "DB",
       "database_name": "oidrune",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "93c6cc47-750b-46dc-a801-f3284e47870c",
       "migrations_dir": "migrations"
     }
   ],
