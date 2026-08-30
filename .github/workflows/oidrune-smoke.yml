@@ -13,3 +13,27 @@ jobs:
       outcome: success
       on_gateway_failure: fail
       summary: Oidrune release smoke test
+
+  verify-delivery:
+    needs: notify
+    if: needs.notify.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: none
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SMOKE_SUMMARY: Oidrune release smoke test
+    steps:
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - name: Assert durable Telegram delivery
+        run: |
+          set -euo pipefail
+          result="$(bunx --bun wrangler@4.127.1 d1 execute oidrune --remote --json --command "SELECT status, summary FROM events WHERE run_id = '${GITHUB_RUN_ID}' AND summary = '${SMOKE_SUMMARY}' ORDER BY received_at DESC LIMIT 1")"
+          status="$(jq -r '.[0].results[0].status // empty' <<<"${result}")"
+          summary="$(jq -r '.[0].results[0].summary // empty' <<<"${result}")"
+          if [[ "${status}" != "delivered" || "${summary}" != "${SMOKE_SUMMARY}" ]]; then
+            echo "::error::The smoke event was not durably delivered with the caller-provided body."
+            exit 1
+          fi
+          echo "Smoke event delivered with the caller-provided body."

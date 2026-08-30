@@ -55,7 +55,9 @@ the gateway handoff is exhausted. The accepted event queues one notification
 attempt for the configured Telegram destination; delivery also requires the
 Worker's separately managed Telegram secret. No caller secret is required.
 The caller's required `summary` is the complete Telegram body; Oidrune only
-normalizes it and does not add workflow metadata.
+normalizes it and does not add workflow metadata. The smoke workflow's
+follow-up verification job queries the matching D1 event and fails unless the
+Queue consumer records `delivered` for that exact caller body.
 
 ## License
 
