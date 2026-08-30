@@ -45,6 +45,16 @@ deployment phase. The D1 database ID is the one deployment-time value kept in
 `wrangler.jsonc`; destination metadata and Access runtime values remain outside
 the source tree.
 
+## Production Smoke Test
+
+The `Oidrune smoke` workflow is a permanent manual end-to-end check. From the
+`main` branch, open GitHub Actions, select `Oidrune smoke`, and choose **Run
+workflow**. It calls the SHA-pinned `notify.yml` release with GitHub OIDC,
+expects the public gateway to return `202`, and fails the notification job when
+the gateway handoff is exhausted. The accepted event queues one notification
+attempt for the configured Telegram destination; delivery also requires the
+Worker's separately managed Telegram secret. No caller secret is required.
+
 ## License
 
 MIT.
