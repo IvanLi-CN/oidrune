@@ -1,7 +1,10 @@
 import { formatTelegramMessage } from "../domain/telegram";
 import type { DeliveryQueueMessage } from "../domain/types";
 import { OidruneRepository } from "../infrastructure/repository";
-import { MAX_DELIVERY_ATTEMPTS } from "../shared/constants";
+import {
+  DELIVERY_CLAIM_RETRY_SECONDS,
+  MAX_DELIVERY_ATTEMPTS,
+} from "../shared/constants";
 import type { Env } from "./bindings";
 
 export async function deliverBatch(
@@ -20,11 +23,17 @@ export async function deliverBatch(
       message.ack();
       continue;
     }
+    const claimId = await repository.claimDelivery(event.id);
+    if (!claimId) {
+      message.retry({ delaySeconds: DELIVERY_CLAIM_RETRY_SECONDS });
+      continue;
+    }
     if (!event.destinationChatId || !env.TELEGRAM_BOT_TOKEN) {
       await failTerminal(
         repository,
         env,
         event.id,
+        claimId,
         message,
         "telegram_not_configured",
       );
@@ -44,7 +53,7 @@ export async function deliverBatch(
         result.status,
         null,
       );
-      await repository.markDelivered(event.id);
+      await repository.markDelivered(event.id, claimId);
       message.ack();
       continue;
     }
@@ -56,7 +65,7 @@ export async function deliverBatch(
         result.status,
         result.errorCode,
       );
-      await repository.markRetrying(event.id);
+      await repository.markRetrying(event.id, claimId);
       message.retry({ delaySeconds: Math.min(300, 2 ** attempt * 10) });
       continue;
     }
@@ -64,6 +73,7 @@ export async function deliverBatch(
       repository,
       env,
       event.id,
+      claimId,
       message,
       result.errorCode,
       result.status,
@@ -75,6 +85,7 @@ async function failTerminal(
   repository: OidruneRepository,
   env: Env,
   eventId: string,
+  claimId: string,
   message: Message<DeliveryQueueMessage>,
   errorCode: string,
   status: number | null = null,
@@ -87,7 +98,7 @@ async function failTerminal(
     status,
     errorCode,
   );
-  await repository.markDeadLetter(eventId, errorCode);
+  await repository.markDeadLetter(eventId, claimId, errorCode);
   await repository.auditSystem(
     "delivery.dead_lettered",
     eventId,

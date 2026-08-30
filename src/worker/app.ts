@@ -44,8 +44,8 @@ export function createApp(): Hono<AppBindings> {
 
   app.post("/v1/events/workflow-completed", async (context) => {
     const token = bearerToken(context.req.raw);
-    const body = await parseBoundedWorkflowBody(context.req.raw);
     const claims = await verifyGitHubOidc(token, context.env);
+    const body = await parseBoundedWorkflowBody(context.req.raw);
     const repository = new OidruneRepository(context.env.DB);
     const [sourcePolicy, trusted, destination] = await Promise.all([
       repository.getSourcePolicy(),
@@ -153,21 +153,14 @@ function bearerToken(request: Request): string {
 
 async function parseBoundedWorkflowBody(request: Request) {
   const length = request.headers.get("content-length");
-  if (length && Number(length) > MAX_REQUEST_BYTES) {
+  if (isOversizedContentLength(length)) {
     throw new HttpProblem(
       400,
       "request_too_large",
       "The request body must not exceed 8 KiB.",
     );
   }
-  const text = await request.text();
-  if (new TextEncoder().encode(text).byteLength > MAX_REQUEST_BYTES) {
-    throw new HttpProblem(
-      400,
-      "request_too_large",
-      "The request body must not exceed 8 KiB.",
-    );
-  }
+  const text = await readBoundedRequestText(request);
   try {
     return workflowCompletedSchema.parse(JSON.parse(text));
   } catch (error) {
@@ -176,4 +169,52 @@ async function parseBoundedWorkflowBody(request: Request) {
     }
     throw new HttpProblem(400, "invalid_json", "Request JSON is invalid.");
   }
+}
+
+function isOversizedContentLength(value: string | null): boolean {
+  if (!value || !/^\d+$/.test(value)) {
+    return false;
+  }
+  const length = Number(value);
+  return Number.isSafeInteger(length) && length > MAX_REQUEST_BYTES;
+}
+
+export async function readBoundedRequestText(
+  request: Request,
+): Promise<string> {
+  const reader = request.body?.getReader();
+  if (!reader) {
+    return "";
+  }
+
+  const chunks: Uint8Array[] = [];
+  let byteLength = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      byteLength += value.byteLength;
+      if (byteLength > MAX_REQUEST_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw new HttpProblem(
+          400,
+          "request_too_large",
+          "The request body must not exceed 8 KiB.",
+        );
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(byteLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(body);
 }

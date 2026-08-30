@@ -12,33 +12,62 @@ on:
         required: true
         type: string
 
-permissions:
-  actions: read
-  contents: write
-  id-token: write
-  pull-requests: read
+permissions: {}
 
 jobs:
-  release:
+  validate-release-target:
+    name: Validate release target
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      sha: ${{ steps.target.outputs.sha }}
+      intent: ${{ steps.target.outputs.intent }}
     steps:
-      - name: Resolve merge commit
-        id: commit
+      - name: Resolve a main release commit
+        id: target
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         env:
           WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
           MANUAL_SHA: ${{ inputs.merge_commit_sha }}
-        run: |
-          sha="${MANUAL_SHA:-$WORKFLOW_SHA}"
-          if [[ ! "$sha" =~ ^[a-f0-9]{40}$ ]]; then
-            echo "Expected a 40-character lowercase Git commit SHA." >&2
-            exit 1
-          fi
-          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+        with:
+          script: |
+            const sha = process.env.MANUAL_SHA || process.env.WORKFLOW_SHA;
+            if (!/^[a-f0-9]{40}$/.test(sha ?? "")) {
+              throw new Error("Expected a 40-character lowercase Git commit SHA.");
+            }
+            const { data: comparison } = await github.rest.repos.compareCommits({ owner: context.repo.owner, repo: context.repo.repo, base: sha, head: "main" });
+            if (!['ahead', 'identical'].includes(comparison.status)) {
+              throw new Error(`Release target ${sha} is not reachable from main.`);
+            }
+            const { data: pullRequests } = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner: context.repo.owner, repo: context.repo.repo, commit_sha: sha });
+            const merged = pullRequests.find((pr) => pr.merged_at && pr.base.ref === "main");
+            if (!merged) {
+              throw new Error(`No merged main PR is associated with ${sha}.`);
+            }
+            const labels = merged.labels.map((label) => label.name);
+            const intent = labels.filter((label) => ["type:major", "type:minor", "type:patch", "type:skip"].includes(label));
+            if (intent.length !== 1 || !labels.includes("channel:stable")) {
+              throw new Error("Validated release labels are absent from the merge commit.");
+            }
+            core.setOutput("sha", sha);
+            core.setOutput("intent", intent[0]);
+
+  release:
+    needs: validate-release-target
+    if: needs.validate-release-target.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+    steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${{ steps.commit.outputs.sha }}
+          ref: ${{ needs.validate-release-target.outputs.sha }}
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: bun install --frozen-lockfile
       - name: Validate production configuration
         env:
           ACCESS_AUD: ${{ vars.OIDRUNE_ACCESS_AUD }}
@@ -53,35 +82,32 @@ jobs:
             echo 'OIDRUNE_ACCESS_AUD and OIDRUNE_ACCESS_TEAM_DOMAIN repository variables are required.' >&2
             exit 1
           fi
-      - name: Resolve immutable release intent
-        id: intent
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
-        with:
-          script: |
-            const sha = process.env.MERGE_SHA;
-            const { data: pullRequests } = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner: context.repo.owner, repo: context.repo.repo, commit_sha: sha });
-            const merged = pullRequests.find((pr) => pr.merged_at);
-            if (!merged) core.setFailed(`No merged PR is associated with ${sha}.`);
-            const labels = merged.labels.map((label) => label.name);
-            const intent = labels.filter((label) => ["type:major", "type:minor", "type:patch", "type:skip"].includes(label));
-            if (intent.length !== 1 || !labels.includes("channel:stable")) core.setFailed("Validated release labels are absent from the merge commit.");
-            return intent[0];
-        env:
-          MERGE_SHA: ${{ steps.commit.outputs.sha }}
       - name: Apply D1 migrations
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bunx --bun wrangler@4.127.1 d1 migrations apply oidrune --remote
-      - name: Prepare release notification authority
+        run: bun ./node_modules/wrangler/bin/wrangler.js d1 migrations apply oidrune --remote
+      - name: Refuse a revoked workflow release
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          MERGE_SHA: ${{ steps.commit.outputs.sha }}
-          INTENT: ${{ steps.intent.outputs.result }}
+          MERGE_SHA: ${{ needs.validate-release-target.outputs.sha }}
         run: |
-          bunx --bun wrangler@4.127.1 d1 execute oidrune --remote --command "INSERT INTO release_snapshots (merge_commit_sha, release_intent, workflow_sha, status, created_at, updated_at) VALUES ('${MERGE_SHA}', '${INTENT}', '${MERGE_SHA}', 'prepared', datetime('now'), datetime('now')) ON CONFLICT(merge_commit_sha) DO UPDATE SET release_intent=excluded.release_intent, workflow_sha=excluded.workflow_sha, status='prepared', updated_at=excluded.updated_at"
-      - run: bun install --frozen-lockfile
+          set -euo pipefail
+          result="$(bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --json --command "SELECT revoked_at FROM trusted_workflow_releases WHERE sha = '${MERGE_SHA}' LIMIT 1")"
+          revoked_at="$(jq -r '.[0].results[0].revoked_at // empty' <<<"${result}")"
+          if [[ -n "${revoked_at}" ]]; then
+            echo 'The workflow release was revoked by an operator.' >&2
+            exit 1
+          fi
+      - name: Prepare release snapshot
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MERGE_SHA: ${{ needs.validate-release-target.outputs.sha }}
+          INTENT: ${{ needs.validate-release-target.outputs.intent }}
+        run: |
+          bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --command "INSERT INTO release_snapshots (merge_commit_sha, release_intent, workflow_sha, status, created_at, updated_at) VALUES ('${MERGE_SHA}', '${INTENT}', '${MERGE_SHA}', 'prepared', datetime('now'), datetime('now')) ON CONFLICT(merge_commit_sha) DO UPDATE SET release_intent=excluded.release_intent, workflow_sha=excluded.workflow_sha, status='prepared', updated_at=datetime('now')"
       - name: Build Console assets
         run: bun run build
       - name: Deploy Worker
@@ -90,24 +116,49 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --var ACCESS_AUD:${{ vars.OIDRUNE_ACCESS_AUD }} --var ACCESS_TEAM_DOMAIN:${{ vars.OIDRUNE_ACCESS_TEAM_DOMAIN }}
-      - name: Promote trusted reusable workflow release
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          MERGE_SHA: ${{ steps.commit.outputs.sha }}
-        run: |
-          bunx wrangler d1 execute oidrune --remote --command "INSERT INTO trusted_workflow_releases (sha, created_by, revoked_at, revoked_by) VALUES ('${MERGE_SHA}', 'release-automation', NULL, NULL) ON CONFLICT(sha) DO UPDATE SET revoked_at=NULL, revoked_by=NULL; UPDATE release_snapshots SET workflow_sha='${MERGE_SHA}', status='deployed', updated_at=datetime('now') WHERE merge_commit_sha='${MERGE_SHA}'"
       - name: Publish stable GitHub release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
           tag_name: v0.1.${{ github.run_number }}
-          target_commitish: ${{ steps.commit.outputs.sha }}
+          target_commitish: ${{ needs.validate-release-target.outputs.sha }}
           generate_release_notes: true
+      - name: Promote trusted reusable workflow release
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MERGE_SHA: ${{ needs.validate-release-target.outputs.sha }}
+        run: |
+          bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --command "INSERT INTO trusted_workflow_releases (sha, created_by, revoked_at, revoked_by) VALUES ('${MERGE_SHA}', 'release-automation', NULL, NULL) ON CONFLICT(sha) DO NOTHING; UPDATE release_snapshots SET workflow_sha='${MERGE_SHA}', status='deployed', updated_at=datetime('now') WHERE merge_commit_sha='${MERGE_SHA}'"
+
+  close-failed-release-snapshot:
+    needs: [validate-release-target, release]
+    if: always() && needs.release.result == 'failure'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.validate-release-target.outputs.sha }}
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - run: bun install --frozen-lockfile
+      - name: Fail closed release snapshot
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MERGE_SHA: ${{ needs.validate-release-target.outputs.sha }}
+        run: |
+          bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --command "UPDATE release_snapshots SET status='failed', updated_at=datetime('now') WHERE merge_commit_sha='${MERGE_SHA}' AND status='prepared'"
+
   release-failure-notification:
     name: Release Failure Notification
-    needs: release
-    if: failure()
-    uses: ./.github/workflows/notify.yml
+    needs:
+      [validate-release-target, release, close-failed-release-snapshot]
+    if: always() && (needs.validate-release-target.result == 'failure' || needs.release.result == 'failure')
+    permissions:
+      contents: none
+      id-token: write
+    uses: IvanLi-CN/oidrune/.github/workflows/notify.yml@911fca0a455f4bbef4b316d21eb7001eedcdc651
     with:
       outcome: failure
       on_gateway_failure: warn

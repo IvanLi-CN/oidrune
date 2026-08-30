@@ -5,7 +5,7 @@
     "pull_request_only": true,
     "signed_commits_required": true,
     "full_sha_action_pinning_required": true,
-    "review_policy_required": false
+    "review_policy_required": true
   },
   "required_checks": ["quality", "Label Gate"],
   "informational_checks": [],
@@ -16,6 +16,7 @@
       "Typecheck",
       "Unit Tests",
       "Worker Integration",
+      "Dependency vulnerability scan",
       "Worker Build",
       "Console E2E",
       "quality"

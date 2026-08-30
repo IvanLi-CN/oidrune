@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 
 interface QualityGateDeclaration {
   default_branch: string;
+  policy: {
+    full_sha_action_pinning_required: boolean;
+    review_policy_required: boolean;
+  };
   required_checks: string[];
   pull_request_workflows: Record<string, string[]>;
 }
@@ -15,6 +19,8 @@ describe("quality-gate declaration", () => {
 
     expect(declaration.default_branch).toBe("main");
     expect(declaration.required_checks).toEqual(["quality", "Label Gate"]);
+    expect(declaration.policy.full_sha_action_pinning_required).toBe(true);
+    expect(declaration.policy.review_policy_required).toBe(true);
     expect(declaration.pull_request_workflows["CI PR"]).toContain("quality");
     expect(declaration.pull_request_workflows["Label Gate"]).toEqual([
       "Label Gate",

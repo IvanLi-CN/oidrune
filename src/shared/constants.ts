@@ -14,3 +14,4 @@ export const FAILURE_RETENTION_DAYS = 90;
 export const MAX_SUMMARY_LENGTH = 1_000;
 export const MAX_REQUEST_BYTES = 8 * 1024;
 export const MAX_DELIVERY_ATTEMPTS = 3;
+export const DELIVERY_CLAIM_RETRY_SECONDS = 300;

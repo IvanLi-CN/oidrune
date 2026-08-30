@@ -46,6 +46,7 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - [Durable Asynchronous Delivery](../../adr/0002-durable-asynchronous-delivery.md)
 - [Access-Protected Operator Console and D1 Policy Store](../../adr/0003-access-protected-operator-console.md)
 - [Custom Domain and Path-Level Access](../../adr/0004-custom-domain-path-access.md)
+- [Leased Delivery Claims](../../adr/0005-leased-delivery-claims.md)
 
 ## 需求（Requirements）
 
@@ -58,6 +59,9 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 
 - Public ingress MUST accept only `POST /v1/events/workflow-completed` with a
   GitHub OIDC JWT in `Authorization: Bearer`.
+- Public ingress MUST validate the OIDC token before consuming the request body.
+  It MUST enforce the 8 KiB body limit while streaming whenever `Content-Length`
+  is absent or invalid; syntactic Bearer extraction MUST NOT authorize buffering.
 - The Worker MUST validate JWT signature through GitHub's JWKS and validate
   `iss`, exact `aud`, `exp`, `nbf`, `jti`, `repository_owner_id`,
   `repository_id`, `runner_environment`, `event_name`, `job_workflow_ref`, and
@@ -77,7 +81,10 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   responding `202 Accepted`. It MUST never use GitHub credentials or APIs to
   roll back, cancel, or mutate a caller release.
 - Telegram delivery MUST use one operator-controlled destination and retry
-  automatically. Terminal failures MUST appear as DLQ and audit records.
+  automatically. An event MUST have at most one active D1 delivery claim before
+  Telegram `sendMessage`; competing Queue or DLQ-retry messages wait for the
+  claim lease and do not send concurrently. Terminal failures MUST appear as
+  DLQ and audit records.
 - The caller-facing default for a failed handoff is warning after bounded
   client retry. A caller may choose `on_gateway_failure: fail`; that choice
   affects only its notification job, not a completed release operation.
@@ -123,11 +130,12 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 5. An authenticated operator manages source policies, the one destination,
    trusted workflow releases, events, DLQ retry, and fixed test messages from
    the console.
-6. The Oidrune Release workflow writes a six-hour prepared release snapshot,
-   tags and deploys a successful release, then registers its own reusable
-   workflow SHA as permanently trusted. Its failure-notification job may use
-   only that prepared SHA; the console can revoke or manually restore a
-   permanent trust record.
+6. The Oidrune Release workflow validates that every target is reachable from
+   `main`, records a prepared release snapshot, and tags, deploys, then
+   permanently trusts a successful release SHA. Prepared and failed snapshots
+   are never trusted. The failure-notification job uses a separately pinned
+   permanent trusted release, while the console can revoke or manually restore
+   a permanent trust record.
 
 ### Edge cases / errors
 
