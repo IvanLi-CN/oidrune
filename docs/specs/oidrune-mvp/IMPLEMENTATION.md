@@ -61,8 +61,8 @@ docs/               product, ADR, quality contract, and Specs
    attempts, trusted releases, release snapshots, and audit records.
 3. Implement GitHub OIDC verification, replay reservation, Source Admission,
    structured ingress, and Queue handoff.
-4. Implement Telegram consumer retries, DLQ, cleanup schedule, and fixed
-   formatting.
+4. Implement Telegram consumer retries, DLQ, cleanup schedule, caller-body
+   normalization, and fixed operator test formatting.
 5. Implement Access-aware administrator APIs and the console flows specified in
    the HTTP contract.
 6. Add the public reusable workflow, same-repository PR guard, client retry,

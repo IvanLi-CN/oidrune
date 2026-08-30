@@ -20,14 +20,16 @@ usable; GitHub OIDC is the endpoint authentication mechanism.
   "schema_version": 1,
   "event_type": "workflow.completed",
   "outcome": "success",
-  "summary": "optional plain-text summary"
+  "summary": "Release job completed."
 }
 ```
 
 `outcome` is one of `success`, `failure`, `cancelled`, or `skipped`. `summary`
-is optional and normalized to at most 1,000 characters. The Worker treats all
-repository identity, run identity, event type, workflow identity, and
-destination information as JWT- or server-derived facts, never body facts.
+is required and is the complete caller-provided notification body. Oidrune
+normalizes it to plain text and caps it at 1,000 characters, but never prefixes
+or appends event metadata. The Worker treats all repository identity, run
+identity, event type, workflow identity, and destination information as JWT- or
+server-derived facts, never body facts.
 
 **Responses**
 
@@ -53,7 +55,7 @@ as a GitHub Actions job, not a step. It requires no `secrets:` value.
 
 - Set `if: always()` when the caller wants notification after upstream failure.
 - Set `needs` to the jobs after which completion should be reported.
-- Grant only `actions: read` and `id-token: write` to the notify job.
+- Grant only `id-token: write` to the notify job.
 - For pull requests, do not bypass the shared workflow's same-repository guard.
 
 **Inputs**
@@ -62,7 +64,7 @@ as a GitHub Actions job, not a step. It requires no `secrets:` value.
 | --- | --- | --- | --- |
 | `outcome` | Yes | `success`, `failure`, `cancelled`, `skipped` | — |
 | `on_gateway_failure` | No | `warn`, `fail` | `warn` |
-| `summary` | No | plain text, max 1,000 characters after normalization | empty |
+| `summary` | Yes | complete plain-text caller body, max 1,000 characters after normalization | — |
 
 No input selects a destination, audience, owner, repository, Token, Bot, or
 workflow release.

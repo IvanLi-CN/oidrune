@@ -54,6 +54,8 @@ expects the public gateway to return `202`, and fails the notification job when
 the gateway handoff is exhausted. The accepted event queues one notification
 attempt for the configured Telegram destination; delivery also requires the
 Worker's separately managed Telegram secret. No caller secret is required.
+The caller's required `summary` is the complete Telegram body; Oidrune only
+normalizes it and does not add workflow metadata.
 
 ## License
 

@@ -91,8 +91,10 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 
 - The console SHOULD mask destination identifiers, expose fixed-format tests,
   and require confirmation for retry, revocation, and destination mutation.
-- Event summaries SHOULD be normalized to plain text and capped at 1,000
-  characters before persistence or Telegram formatting.
+- The workflow-completion Telegram body MUST be the normalized caller-provided
+  `summary`, capped at 1,000 characters before persistence. Oidrune MUST NOT
+  prefix or append labels, repository, outcome, event, run, timestamp, or
+  destination data to that body.
 - The Worker SHOULD use a stable opaque OIDC audience independent of the
   production hostname.
 
@@ -109,13 +111,15 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
    workflow with `id-token: write` and no `secrets:` block.
 2. The reusable workflow obtains a custom-audience OIDC JWT and submits a
    small structured completion event. The caller passes its constrained
-   completion `outcome`; the workflow fetches GitHub run metadata through the
-   automatic read-scoped `GITHUB_TOKEN`, not a configured secret.
+   completion `outcome` and complete notification body in `summary`; the
+   workflow does not fetch or derive notification text from GitHub APIs.
 3. The Worker rejects an invalid or replayed JWT before any enqueue operation.
    An admitted Source yields one normalized event, one queue message, and
    `202 Accepted`.
-4. The consumer formats and sends the event through Telegram `sendMessage`.
-   It retries retryable failures; exhausted events become Dead Letters.
+4. The consumer sends the stored normalized caller body through Telegram
+   `sendMessage`. Structured provenance remains available in D1, audit, and
+   console views. It retries retryable failures; exhausted events become Dead
+   Letters.
 5. An authenticated operator manages source policies, the one destination,
    trusted workflow releases, events, DLQ retry, and fixed test messages from
    the console.
@@ -163,6 +167,9 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   may notify; given a fork pull request, it creates no OIDC handoff.
 - Given Telegram delivery failure after handoff, when retries exhaust, then the
   event is visible as a Dead Letter while the original release remains intact.
+- Given a caller-provided `summary`, when delivery succeeds, then the Telegram
+  body equals the normalized caller body and contains no Oidrune-added event
+  metadata.
 - Given a Cloudflare account member, when they access the console path, then
   they can manage only the defined operations; an unauthenticated request is
   blocked by Access and the API rejects missing identity.

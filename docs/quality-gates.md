@@ -41,8 +41,10 @@ names. GitHub Rulesets must require the same two contexts from GitHub Actions.
   release snapshot, and automatically promotes its reusable workflow SHA.
 - **Release Failure Notification**: the failure job in `Release` reports
   release failures through Oidrune's non-blocking notification policy and
-  includes release intent, commit, and run context. It uses the release's
-  six-hour prepared snapshot, never a mutable default-branch workflow ref.
+  sends its caller-provided failure summary. Structured release intent, commit,
+  and run context remain in the workflow and Oidrune audit records. It uses the
+  release's six-hour prepared snapshot, never a mutable default-branch workflow
+  ref.
 
 ## Release Durability
 
