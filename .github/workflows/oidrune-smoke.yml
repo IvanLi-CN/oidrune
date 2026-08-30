@@ -1,0 +1,17 @@
+name: Oidrune smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  id-token: write
+
+jobs:
+  notify:
+    uses: IvanLi-CN/oidrune/.github/workflows/notify.yml@d8981652bb80f52178f9fe6cadd4dd62233a9018
+    with:
+      outcome: success
+      on_gateway_failure: fail
+      summary: Oidrune release smoke test
