@@ -1,5 +1,6 @@
 import { applyD1Migrations, SELF, env as testEnv } from "cloudflare:test";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { hasTrustedWorkflowReference } from "../../src/domain/policy";
 import type {
   DeliveryQueueMessage,
   NotificationEvent,
@@ -155,6 +156,29 @@ describe("Worker security boundaries", () => {
       .run();
 
     await expect(repository.isTrustedWorkflowRelease(sha)).resolves.toBe(false);
+  });
+
+  it("accepts trusted workflow references from upstream and fork repositories", () => {
+    const sha = "d".repeat(40);
+
+    expect(
+      hasTrustedWorkflowReference({
+        job_workflow_sha: sha,
+        job_workflow_ref: `IvanLi-CN/oidrune/.github/workflows/notify.yml@${sha}`,
+      }),
+    ).toBe(true);
+    expect(
+      hasTrustedWorkflowReference({
+        job_workflow_sha: sha,
+        job_workflow_ref: `fork-owner/oidrune/.github/workflows/notify.yml@${sha}`,
+      }),
+    ).toBe(true);
+    expect(
+      hasTrustedWorkflowReference({
+        job_workflow_sha: sha,
+        job_workflow_ref: `fork-owner/oidrune/.github/workflows/notify.yml@${"e".repeat(40)}`,
+      }),
+    ).toBe(false);
   });
 
   it("claims a queued event before Telegram delivery so concurrent messages send once", async () => {

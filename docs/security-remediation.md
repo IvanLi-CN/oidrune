@@ -24,8 +24,8 @@ configuration and are not changed by a repository pull request.
 
 ## Cloudflare Owner Actions
 
-1. Confirm the `oidrune.707979.xyz` zone has an active edge certificate and
-   that SSL/TLS encryption is not disabled.
+1. Confirm the Default Gateway's configured zone has an active edge certificate
+   and that SSL/TLS encryption is not disabled.
 2. In **SSL/TLS > Edge Certificates**, enable [**Always Use HTTPS**](https://developers.cloudflare.com/ssl/edge-certificates/additional-options/always-use-https/).
    This redirects HTTP requests before they reach the Worker, including the
    public OIDC ingress, and avoids an origin-level redirect loop.

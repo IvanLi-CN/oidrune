@@ -51,7 +51,7 @@ docs/               product, ADR, quality contract, and Specs
 | Queue + DLQ | At-least-once handoff and bounded Telegram delivery retries. |
 | Durable Object | Atomic JWT `jti` replay reservation until token expiry. |
 | Worker Secrets | Telegram Bot Token and deployment-only secrets; never browser-readable. |
-| Cloudflare Access | Account-member gate for `/console*` and `/api/admin*` on `oidrune.707979.xyz`; public ingress remains outside Access. |
+| Cloudflare Access | Account-member gate for `/console*` and `/api/admin*` on the operator-configured Public Protocol Endpoint; public ingress remains outside Access. |
 
 ## Planned Implementation Sequence
 

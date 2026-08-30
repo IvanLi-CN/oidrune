@@ -47,13 +47,16 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - [Access-Protected Operator Console and D1 Policy Store](../../adr/0003-access-protected-operator-console.md)
 - [Custom Domain and Path-Level Access](../../adr/0004-custom-domain-path-access.md)
 - [Leased Delivery Claims](../../adr/0005-leased-delivery-claims.md)
+- [Portable Gateway Selection](../../adr/0006-portable-gateway-selection.md)
 
 ## 需求（Requirements）
 
-- 生产 Worker MUST use the `oidrune.707979.xyz` Custom Domain with
-  `workers.dev` disabled. `/v1/events/workflow-completed` remains publicly
-  reachable for GitHub OIDC, while `/console*` and `/api/admin*` are protected
-  by path-level Cloudflare Access.
+- Each deployment MUST expose an HTTPS Public Protocol Endpoint.
+  `/v1/events/workflow-completed` remains publicly reachable for GitHub OIDC,
+  while `/console*` and `/api/admin*` are protected by path-level Cloudflare
+  Access. The Default Gateway uses an operator-configured Custom Domain with
+  `workers.dev` disabled; a Fork Deployment MAY use `workers.dev` with
+  equivalent Access protection.
 
 ### MUST
 
@@ -75,8 +78,17 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - The trusted reusable workflow MUST suppress `pull_request` notification
   unless its head repository equals the base repository. It MUST not check out
   or execute pull-request code for the notification step.
+- A trusted reusable workflow reference MUST use the exact
+  `<owner>/<repository>/.github/workflows/notify.yml@<full-commit-sha>` shape.
+  The SHA MUST be an active Trusted Workflow Release; the owner and repository
+  MAY be the upstream project or a deployment fork.
 - Caller repositories MUST pass no Oidrune or Telegram secret. The shared
-  workflow hides the ingress URL and audience and is referenced by full SHA.
+  workflow is referenced by full SHA. A caller MAY select a compatible gateway
+  only by supplying both its HTTPS endpoint and OIDC audience as an explicit
+  workflow override or paired repository Variables (`OIDRUNE_GATEWAY_URL` and
+  `OIDRUNE_OIDC_AUDIENCE`); otherwise the Default Gateway is used. The selected
+  endpoint MUST use HTTPS, have the exact `/v1/events/workflow-completed` path,
+  and contain no credentials, query parameters, or fragment.
 - The Worker MUST create a normalized event record and enqueue it before
   responding `202 Accepted`. It MUST never use GitHub credentials or APIs to
   roll back, cancel, or mutate a caller release.
@@ -175,6 +187,9 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   ingress, then Oidrune rejects it without a queue or Telegram side effect.
 - Given a same-repository pull request, when the shared workflow runs, then it
   may notify; given a fork pull request, it creates no OIDC handoff.
+- Given a complete explicit gateway pair, a complete caller Variables pair, or
+  no override, when the shared workflow runs, then it selects the pair in that
+  precedence order and requests OIDC only after validating the HTTPS endpoint.
 - Given Telegram delivery failure after handoff, when retries exhaust, then the
   event is visible as a Dead Letter while the original release remains intact.
 - Given a caller-provided `summary`, when delivery succeeds, then the Telegram

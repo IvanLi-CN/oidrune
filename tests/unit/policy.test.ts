@@ -49,7 +49,25 @@ describe("source admission", () => {
     expect(
       hasTrustedWorkflowReference({
         job_workflow_sha: sha,
+        job_workflow_ref: `fork-owner/forked-oidrune/.github/workflows/notify.yml@${sha}`,
+      }),
+    ).toBe(true);
+    expect(
+      hasTrustedWorkflowReference({
+        job_workflow_sha: sha,
         job_workflow_ref: "IvanLi-CN/oidrune/.github/workflows/notify.yml@main",
+      }),
+    ).toBe(false);
+    expect(
+      hasTrustedWorkflowReference({
+        job_workflow_sha: sha,
+        job_workflow_ref: `fork-owner/forked-oidrune/.github/workflows/other.yml@${sha}`,
+      }),
+    ).toBe(false);
+    expect(
+      hasTrustedWorkflowReference({
+        job_workflow_sha: sha,
+        job_workflow_ref: `fork-owner/forked-oidrune/.github/workflows/notify.yml@${"b".repeat(40)}`,
       }),
     ).toBe(false);
   });

@@ -44,6 +44,89 @@ describe("release workflow security boundaries", () => {
   });
 });
 
+describe("portable gateway selection", () => {
+  it("exposes paired direct and caller-variable overrides with default fallback", async () => {
+    const workflow = await readWorkflow("notify.yml");
+
+    expect(workflow).toContain("gateway_url:");
+    expect(workflow).toContain("oidc_audience:");
+    expect(workflow).toContain(`INPUT_GATEWAY_URL: \${{ inputs.gateway_url }}`);
+    expect(workflow).toContain(
+      `INPUT_OIDC_AUDIENCE: \${{ inputs.oidc_audience }}`,
+    );
+    expect(workflow).toContain(
+      `VARIABLE_GATEWAY_URL: \${{ vars.OIDRUNE_GATEWAY_URL }}`,
+    );
+    expect(workflow).toContain(
+      `VARIABLE_OIDC_AUDIENCE: \${{ vars.OIDRUNE_OIDC_AUDIENCE }}`,
+    );
+
+    const explicit = workflow.indexOf(
+      `OIDRUNE_GATEWAY_URL="\${INPUT_GATEWAY_URL}"`,
+    );
+    const variables = workflow.indexOf(
+      `OIDRUNE_GATEWAY_URL="\${VARIABLE_GATEWAY_URL}"`,
+    );
+    const defaults = workflow.indexOf(
+      `OIDRUNE_GATEWAY_URL="\${DEFAULT_GATEWAY_URL}"`,
+    );
+    expect(explicit).toBeGreaterThanOrEqual(0);
+    expect(variables).toBeGreaterThan(explicit);
+    expect(defaults).toBeGreaterThan(variables);
+    expect(workflow).toContain(
+      "gateway_url and oidc_audience must be provided together",
+    );
+    expect(workflow).toContain(
+      "OIDRUNE_GATEWAY_URL and OIDRUNE_OIDC_AUDIENCE variables must be provided together",
+    );
+  });
+
+  it("validates the gateway before requesting OIDC and URL-encodes the audience", async () => {
+    const workflow = await readWorkflow("notify.yml");
+    const validation = workflow.indexOf("if ! node -e");
+    const tokenRequest = workflow.indexOf('token="$(curl');
+
+    expect(validation).toBeGreaterThanOrEqual(0);
+    expect(tokenRequest).toBeGreaterThan(validation);
+    expect(workflow).toContain('url.protocol !== "https:"');
+    expect(workflow).toContain("url.username");
+    expect(workflow).toContain("url.password");
+    expect(workflow).toContain("url.search");
+    expect(workflow).toContain("url.hash");
+    expect(workflow).toContain('value.includes("?")');
+    expect(workflow).toContain('value.includes("#")');
+    expect(workflow).toContain(
+      'url.pathname !== "/v1/events/workflow-completed"',
+    );
+    expect(workflow).toContain(
+      `--data-urlencode "audience=\${OIDRUNE_AUDIENCE}"`,
+    );
+    expect(workflow).not.toContain("ACTIONS_ID_TOKEN_REQUEST_URL}&audience=");
+  });
+
+  it("keeps the reusable workflow caller-owned and secretless", async () => {
+    const workflow = await readWorkflow("notify.yml");
+
+    expect(workflow).toContain(`SUMMARY: \${{ inputs.summary }}`);
+    expect(workflow).not.toContain("secrets.");
+    expect(workflow).not.toContain("actions/checkout");
+  });
+
+  it("lets the permanent smoke workflow pass a paired gateway override", async () => {
+    const [workflow, example] = await Promise.all([
+      readWorkflow("oidrune-smoke.yml"),
+      readFile("docs/notify-example.md", "utf8"),
+    ]);
+
+    expect(workflow).toContain("gateway_url:");
+    expect(workflow).toContain("oidc_audience:");
+    expect(workflow).toContain(`gateway_url: \${{ inputs.gateway_url }}`);
+    expect(workflow).toContain(`oidc_audience: \${{ inputs.oidc_audience }}`);
+    expect(example).toContain("workers.dev");
+    expect(example).toContain("trust that upstream SHA");
+  });
+});
+
 describe("CI supply-chain hardening", () => {
   it("scans the Bun lockfile in pull-request and main CI", async () => {
     const [prWorkflow, mainWorkflow] = await Promise.all([
