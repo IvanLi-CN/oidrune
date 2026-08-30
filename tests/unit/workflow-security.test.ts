@@ -14,6 +14,25 @@ describe("release workflow security boundaries", () => {
     expect(workflow).toContain('pr.merged_at && pr.base.ref === "main"');
   });
 
+  it("allows a manual release only from the main workflow definition", async () => {
+    const workflow = await readWorkflow("release.yml");
+
+    expect(workflow).toContain(
+      "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'",
+    );
+  });
+
+  it("checks revocation before checking out the validated release target", async () => {
+    const workflow = await readWorkflow("release.yml");
+    const revocationCheck = workflow.indexOf(
+      "name: Refuse a revoked workflow release",
+    );
+    const targetCheckout = workflow.indexOf("name: Checkout validated release");
+
+    expect(revocationCheck).toBeGreaterThanOrEqual(0);
+    expect(targetCheckout).toBeGreaterThan(revocationCheck);
+  });
+
   it("uses a permanently pinned release for failure notification instead of a prepared snapshot", async () => {
     const workflow = await readWorkflow("release.yml");
 
@@ -48,6 +67,15 @@ describe("CI supply-chain hardening", () => {
     expect(packageJson).toContain(
       '"@socketsecurity/bun-security-scanner": "1.1.2"',
     );
+  });
+
+  it("bounds a Telegram request before another worker can take its claim", async () => {
+    const delivery = await readFile("src/worker/delivery.ts", "utf8");
+    const constants = await readFile("src/shared/constants.ts", "utf8");
+
+    expect(delivery).toContain("AbortSignal.timeout");
+    expect(delivery).toContain("TELEGRAM_REQUEST_TIMEOUT_SECONDS");
+    expect(constants).toContain("TELEGRAM_REQUEST_TIMEOUT_SECONDS = 240");
   });
 
   it("keeps Cloudflare credentials out of the smoke dependency installation step", async () => {

@@ -196,6 +196,7 @@ describe("Worker security boundaries", () => {
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(sendCount).toBe(1);
+      expect(secondMessage.retry).toHaveBeenCalledWith({ delaySeconds: 300 });
       releaseSend?.();
       await Promise.all([firstDelivery, secondDelivery]);
       expect(firstMessage.ack).toHaveBeenCalledOnce();

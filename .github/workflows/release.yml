@@ -17,7 +17,9 @@ permissions: {}
 jobs:
   validate-release-target:
     name: Validate release target
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -63,11 +65,13 @@ jobs:
       contents: write
       id-token: write
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Checkout release infrastructure
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${{ needs.validate-release-target.outputs.sha }}
+          ref: main
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
-      - run: bun install --frozen-lockfile
+      - name: Install release infrastructure
+        run: bun install --frozen-lockfile
       - name: Validate production configuration
         env:
           ACCESS_AUD: ${{ vars.OIDRUNE_ACCESS_AUD }}
@@ -82,11 +86,17 @@ jobs:
             echo 'OIDRUNE_ACCESS_AUD and OIDRUNE_ACCESS_TEAM_DOMAIN repository variables are required.' >&2
             exit 1
           fi
-      - name: Apply D1 migrations
+      - name: Ensure trusted-release schema
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bun ./node_modules/wrangler/bin/wrangler.js d1 migrations apply oidrune --remote
+        run: |
+          set -euo pipefail
+          result="$(bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --json --command "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'trusted_workflow_releases' LIMIT 1")"
+          table_name="$(jq -r '.[0].results[0].name // empty' <<<"${result}")"
+          if [[ "${table_name}" != "trusted_workflow_releases" ]]; then
+            bun ./node_modules/wrangler/bin/wrangler.js d1 migrations apply oidrune --remote
+          fi
       - name: Refuse a revoked workflow release
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -100,6 +110,32 @@ jobs:
             echo 'The workflow release was revoked by an operator.' >&2
             exit 1
           fi
+      - name: Checkout validated release
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.validate-release-target.outputs.sha }}
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+      - name: Install validated release
+        run: bun install --frozen-lockfile
+      - name: Validate production configuration
+        env:
+          ACCESS_AUD: ${{ vars.OIDRUNE_ACCESS_AUD }}
+          ACCESS_TEAM_DOMAIN: ${{ vars.OIDRUNE_ACCESS_TEAM_DOMAIN }}
+        run: |
+          set -euo pipefail
+          if grep -q '00000000-0000-0000-0000-000000000000' wrangler.jsonc; then
+            echo 'D1 database_id is still the unprovisioned placeholder.' >&2
+            exit 1
+          fi
+          if [[ -z "${ACCESS_AUD}" || -z "${ACCESS_TEAM_DOMAIN}" ]]; then
+            echo 'OIDRUNE_ACCESS_AUD and OIDRUNE_ACCESS_TEAM_DOMAIN repository variables are required.' >&2
+            exit 1
+          fi
+      - name: Apply validated release D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: bun ./node_modules/wrangler/bin/wrangler.js d1 migrations apply oidrune --remote
       - name: Prepare release snapshot
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -137,11 +173,13 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Checkout release infrastructure
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${{ needs.validate-release-target.outputs.sha }}
+          ref: main
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
-      - run: bun install --frozen-lockfile
+      - name: Install release infrastructure
+        run: bun install --frozen-lockfile
       - name: Fail closed release snapshot
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

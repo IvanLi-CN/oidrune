@@ -4,6 +4,7 @@ import { OidruneRepository } from "../infrastructure/repository";
 import {
   DELIVERY_CLAIM_RETRY_SECONDS,
   MAX_DELIVERY_ATTEMPTS,
+  TELEGRAM_REQUEST_TIMEOUT_SECONDS,
 } from "../shared/constants";
 import type { Env } from "./bindings";
 
@@ -129,6 +130,7 @@ async function sendTelegram(
           text,
           disable_web_page_preview: true,
         }),
+        signal: AbortSignal.timeout(TELEGRAM_REQUEST_TIMEOUT_SECONDS * 1_000),
       },
     );
     if (response.ok) {
