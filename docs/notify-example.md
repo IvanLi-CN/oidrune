@@ -16,7 +16,6 @@ jobs:
     if: always()
     needs: [release]
     permissions:
-      actions: read
       id-token: write
     uses: IvanLi-CN/oidrune/.github/workflows/notify.yml@<full-commit-sha>
     with:
@@ -27,3 +26,6 @@ jobs:
 
 Use `on_gateway_failure: fail` only when the notification job itself must be
 red. It never changes an already-completed release job.
+
+`summary` is the complete caller-provided Telegram body. Oidrune only
+normalizes it and does not add workflow, repository, outcome, or run metadata.

@@ -13,9 +13,8 @@ on:
         default: warn
         type: string
       summary:
-        description: Optional plain-text summary, normalized by Oidrune.
-        required: false
-        default: ""
+        description: Complete caller-provided Telegram body, normalized by Oidrune.
+        required: true
         type: string
 
 jobs:
@@ -23,7 +22,6 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
     runs-on: ubuntu-24.04
     permissions:
-      actions: read
       contents: none
       id-token: write
     env:
@@ -33,18 +31,6 @@ jobs:
       SUMMARY: ${{ inputs.summary }}
       ON_GATEWAY_FAILURE: ${{ inputs.on_gateway_failure }}
     steps:
-      - name: Read run metadata
-        id: run
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          metadata="$(curl --fail --silent --show-error \
-            --header "Authorization: Bearer ${GH_TOKEN}" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}")"
-          conclusion="$(jq -r '.conclusion // .status // "unknown"' <<<"${metadata}")"
-          printf 'conclusion=%s\n' "${conclusion}" >> "${GITHUB_OUTPUT}"
       - name: Submit OIDC-authenticated handoff
         run: |
           set -euo pipefail
@@ -52,11 +38,14 @@ jobs:
             echo "::error::outcome must be success, failure, cancelled, or skipped"
             exit 1
           fi
+          if [[ -z "${SUMMARY//[[:space:]]/}" ]]; then
+            echo "::error::summary must be provided by the caller"
+            exit 1
+          fi
           token="$(curl --fail --silent --show-error \
             --header "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
             "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=${OIDRUNE_AUDIENCE}" | jq -r '.value')"
-          effective_summary="${SUMMARY:-GitHub Actions run conclusion: ${{ steps.run.outputs.conclusion }}}"
-          payload="$(jq -cn --arg outcome "${OUTCOME}" --arg summary "${effective_summary}" \
+          payload="$(jq -cn --arg outcome "${OUTCOME}" --arg summary "${SUMMARY}" \
             '{schema_version: 1, event_type: "workflow.completed", outcome: $outcome, summary: $summary}')"
           status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
             --retry 3 --retry-all-errors --retry-delay 2 \

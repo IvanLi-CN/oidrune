@@ -11,7 +11,18 @@ export const workflowCompletedSchema = z.object({
   schema_version: z.literal(1),
   event_type: z.literal("workflow.completed"),
   outcome: outcomeSchema,
-  summary: z.string().max(8_000).optional().default(""),
+  summary: z
+    .string()
+    .min(1)
+    .max(8_000)
+    .refine(
+      (value) =>
+        [...value].some((character) => {
+          const code = character.charCodeAt(0);
+          return code >= 32 && code !== 127 && character.trim().length > 0;
+        }),
+      "summary must contain printable text",
+    ),
 });
 
 export const immutableIdSchema = z
