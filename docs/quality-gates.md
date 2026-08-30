@@ -12,8 +12,7 @@ policy aligned.
 - All commits that reach `main` require verified signatures.
 - GitHub Actions and reusable workflows are pinned to full commit SHAs, and the
   GitHub Actions platform policy must reject non-SHA references.
-- Every pull request requires one approving review from someone other than the
-  latest pusher. GitHub must dismiss stale approvals on new commits.
+- Pull requests created by owners or project members do not require approval.
 
 ## Required Checks
 
@@ -24,8 +23,7 @@ policy aligned.
 
 The checked-in declaration will name both checks as `required_checks`, list no
 informational checks or waivers, and enumerate the expected PR workflow/job
-names. GitHub Rulesets must require the same two contexts from GitHub Actions
-and the review policy above.
+names. GitHub Rulesets must require the same two contexts from GitHub Actions.
 
 ## Workflow Topology
 
@@ -34,9 +32,10 @@ and the review policy above.
   Integration`, `Dependency vulnerability scan`, `Worker Build`, and `Console
   E2E`; the final `quality` job fails unless all predecessors pass.
 - **Label Gate**: runs from trusted workflow source when a pull request is
-  opened, synchronized, or its labels change. It validates exactly one
-  `type:major`, `type:minor`, `type:patch`, or `type:skip`, plus
-  `channel:stable`.
+  opened, synchronized, or its labels change, and for `merge_group` checks. It
+  resolves queue members through GitHub metadata and fails closed when that
+  membership cannot be proven. Every member must have exactly one `type:major`,
+  `type:minor`, `type:patch`, or `type:skip`, plus `channel:stable`.
 - **CI Main**: runs the production-relevant checks after merge. It is not
   cancelable by later pushes.
 - **Release**: consumes the validated merge intent after successful CI Main,

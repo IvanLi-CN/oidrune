@@ -3,6 +3,8 @@ name: Label Gate
 on:
   pull_request_target:
     types: [opened, reopened, synchronize, labeled, unlabeled]
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   pull-requests: read
@@ -15,9 +17,49 @@ jobs:
       - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         with:
           script: |
-            const labels = context.payload.pull_request.labels.map((label) => label.name);
-            const releaseLabels = labels.filter((label) => ["type:major", "type:minor", "type:patch", "type:skip"].includes(label));
-            const channels = labels.filter((label) => label === "channel:stable");
-            if (releaseLabels.length !== 1 || channels.length !== 1) {
-              core.setFailed("PR must have exactly one type:major/type:minor/type:patch/type:skip label and channel:stable.");
+            async function pullNumbersForGate() {
+              if (context.eventName === "pull_request_target") {
+                return [context.payload.pull_request.number];
+              }
+
+              const mergeGroup = context.payload.merge_group;
+              const headSha = mergeGroup?.head_sha;
+              if (!headSha) {
+                throw new Error("Merge queue head SHA is unavailable.");
+              }
+              const { data: associatedPulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: headSha,
+              });
+              const numbers = new Set(
+                associatedPulls
+                  .filter((pull) => pull.base.ref === "main")
+                  .map((pull) => pull.number),
+              );
+              const queuedNumber = mergeGroup.head_ref.match(/(?:^|\/)pr-(\d+)-/)?.[1];
+              if (queuedNumber) {
+                numbers.add(Number(queuedNumber));
+              }
+              if (numbers.size === 0) {
+                throw new Error("Merge queue PR membership could not be proven.");
+              }
+              return [...numbers];
+            }
+
+            for (const pullNumber of await pullNumbersForGate()) {
+              const { data: pullRequest } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pullNumber,
+              });
+              if (pullRequest.base.ref !== "main") {
+                throw new Error(`PR #${pullNumber} does not target main.`);
+              }
+              const labels = pullRequest.labels.map((label) => label.name);
+              const releaseLabels = labels.filter((label) => ["type:major", "type:minor", "type:patch", "type:skip"].includes(label));
+              const channels = labels.filter((label) => label === "channel:stable");
+              if (releaseLabels.length !== 1 || channels.length !== 1) {
+                core.setFailed(`PR #${pullNumber} must have exactly one type:major/type:minor/type:patch/type:skip label and channel:stable.`);
+              }
             }

@@ -11,11 +11,10 @@ configuration and are not changed by a repository pull request.
    to a full-length commit SHA**. The [GitHub Actions policy](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)
    is the only control that blocks a future non-SHA reference; repository tests
    and the quality declaration only check syntax.
-2. In the `main` ruleset, require pull requests, one approving review from a
-   reviewer other than the latest pusher, stale-approval dismissal, verified
-   signatures, and the `quality` and `Label Gate` required checks. Do not grant
-   an administrator bypass for these protections unless incident recovery
-   requires it. GitHub documents these settings under [ruleset pull-request
+2. In the `main` ruleset, require pull requests, verified signatures, and the
+   `quality` and `Label Gate` required checks. Do not require approving reviews
+   or last-pusher approval: these must not gate PRs created by owners or project
+   members. GitHub documents these settings under [ruleset pull-request
    rules](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets).
 3. In **Settings > Advanced Security**, enable **Dependabot alerts** and
    **Dependabot security updates**. The committed `dependabot.yml` configures

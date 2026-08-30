@@ -207,7 +207,8 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 
 - Biome `check`, TypeScript `typecheck`, unit/integration test, Worker build,
   console E2E, `quality` aggregate, and Label Gate as defined in
-  `../../quality-gates.md`.
+  `../../quality-gates.md`. Label Gate MUST validate the same release-label
+  contract for pull requests and merge-queue groups.
 
 ## Visual Evidence
 
