@@ -119,6 +119,7 @@ export function createApp(): Hono<AppBindings> {
   });
   registerAdminRoutes(app);
 
+  app.on(["GET", "HEAD"], "/", (context) => context.redirect("/console/", 302));
   app.all("/console", serveConsoleAssets);
   app.all("/console/*", serveConsoleAssets);
 

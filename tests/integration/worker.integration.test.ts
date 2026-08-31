@@ -105,6 +105,24 @@ describe("Worker security boundaries", () => {
     expect(adminResponse.status).toBe(401);
   });
 
+  it("redirects browser requests from the root to the protected console", async () => {
+    const [getResponse, headResponse, postResponse] = await Promise.all([
+      SELF.fetch("http://example.com/", { redirect: "manual" }),
+      SELF.fetch("http://example.com/", {
+        method: "HEAD",
+        redirect: "manual",
+      }),
+      SELF.fetch("http://example.com/", { method: "POST" }),
+    ]);
+
+    expect(getResponse.status).toBe(302);
+    expect(getResponse.headers.get("location")).toBe("/console/");
+    expect(headResponse.status).toBe(302);
+    expect(headResponse.headers.get("location")).toBe("/console/");
+    expect(await headResponse.text()).toBe("");
+    expect(postResponse.status).toBe(404);
+  });
+
   it("provisions the D1 schema and reserves an OIDC jti once", async () => {
     const tables = await bindings.DB.prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('notification_events', 'audit_log') ORDER BY name",
