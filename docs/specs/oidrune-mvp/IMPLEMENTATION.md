@@ -51,7 +51,7 @@ docs/               product, ADR, quality contract, and Specs
 | Queue + DLQ | At-least-once handoff and bounded Telegram delivery retries. |
 | Durable Object | Atomic JWT `jti` replay reservation until token expiry. |
 | Worker Secrets | Telegram Bot Token and deployment-only secrets; never browser-readable. |
-| Cloudflare Access | Account-member gate for `/console*` and `/api/admin*` on the operator-configured Public Protocol Endpoint; public ingress remains outside Access. |
+| Cloudflare Access | GitHub-only Operator gate for `/console*` and `/api/admin*` on the operator-configured Public Protocol Endpoint; public ingress remains outside Access. |
 
 ## Planned Implementation Sequence
 
@@ -72,6 +72,78 @@ docs/               product, ADR, quality contract, and Specs
 8. After explicit authorization, provision Cloudflare resources, configure
    Access paths, set Worker Secrets, and create the Telegram target.
 
+## GitHub-Only Operator Authentication
+
+### Repository implementation
+
+1. Keep `/v1/events/workflow-completed` outside Access and preserve its existing
+   GitHub Actions OIDC verification and Source Admission behavior.
+2. Keep `/console*` and `/api/admin*` behind the same Access application and
+   continue validating `cf-access-jwt-assertion` against `ACCESS_AUD` and
+   `ACCESS_TEAM_DOMAIN` in the Worker.
+3. Treat the verified Access `sub` as the stable audit actor. An `email` claim
+   may be retained as optional identity context but must not become the
+   authorization source.
+4. Do not add Worker routes for OAuth initiation or callback, a session store,
+   GitHub API calls, GitHub token persistence, or authentication dependencies.
+5. Cover the unchanged Worker trust boundary with integration tests: missing or
+   invalid Access JWTs fail closed for both protected surfaces, while the public
+   ingress remains governed only by its existing OIDC contract.
+6. Add a repository privacy check that rejects Operator allowlists and Access
+   IdP or OAuth configuration in versioned deployment configuration. Use only
+   clearly fictitious placeholders in fixtures. Keep secret scanning enabled;
+   neither check replaces review of the full diff because the repository does
+   not know which deployment-private identity values to match.
+
+### Deployment-private configuration
+
+The following work is intentionally outside repository automation and requires
+separate authority for GitHub and Cloudflare writes:
+
+1. Create an operator-controlled GitHub OAuth application using the Cloudflare
+   Access team domain as its homepage and the Access callback endpoint as its
+   authorization callback.
+2. Store the OAuth client ID and client secret only in the Cloudflare Access
+   GitHub identity-provider configuration. Do not expose either value to the
+   Worker, GitHub Actions, D1, browser code, logs, or repository variables.
+3. Configure the Access application protecting `/console*` and `/api/admin*` to
+   use only the GitHub identity provider with instant authentication enabled.
+4. Replace the account-member policy with an explicit allow policy for the
+   deployment's approved GitHub Operator identity. Do not derive this identity
+   from the repository namespace, Source Owner Allowlist, or Repository
+   Allowlist.
+5. Remove Cloudflare identity, one-time PIN, and every other interactive login
+   method from the application without a compatibility window. Existing Access
+   sessions must be revoked so the new policy is evaluated immediately.
+6. If the cutover fails, repair the OAuth application, identity provider, or
+   policy through the GitHub and Cloudflare control planes. Do not restore a
+   fallback login or add a Worker bypass. Temporary console unavailability is
+   acceptable; public ingress availability is not.
+
+No real Operator identity, OAuth application value, Access audience, Access team
+domain, policy value, account identifier, or production snapshot belongs in the
+repository. Each Fork Deployment supplies and protects its own values.
+
+### Acceptance
+
+After explicit authorization for real-environment verification:
+
+1. Confirm the approved GitHub Operator is redirected directly to GitHub and can
+   load `/console/`.
+2. Confirm the same session can call `GET /api/admin/config` and that a mutating
+   operation records the verified Access subject as its audit actor.
+3. Confirm a GitHub identity outside the explicit allow policy is denied before
+   reaching the Worker.
+4. Confirm Cloudflare identity, one-time PIN, and other login methods are not
+   offered or accepted.
+5. Revoke the approved Operator's Access session, sign in again, and repeat the
+   protected-surface checks so a pre-cutover cookie cannot mask a policy error.
+6. Call the public workflow ingress without Access and verify its existing
+   GitHub Actions OIDC behavior, including rejection of a request without a
+   valid workflow token.
+7. Run the permanent Oidrune smoke workflow and confirm durable delivery remains
+   successful after the Access change.
+
 ## Release Promotion Coverage
 
 The Release workflow must deploy the Worker first, then transactionally record
@@ -81,8 +153,9 @@ be backfilled without recalculating PR labels from mutable state.
 
 ## Remaining Gaps
 
-- Cloudflare account resources, Access application, Telegram bot, and Worker
-  secrets remain external deployment work.
+- Cloudflare account resources, GitHub-backed Access application and private
+  Operator allow policy, Telegram bot, and Worker secrets remain external
+  deployment work.
 - External provisioning values, including the D1 identifier, Access audience and
   team domain, and Telegram target, are intentionally deployment-time inputs.
 

@@ -32,10 +32,12 @@ Worker. The Worker validates the GitHub OIDC JWT, authorizes the verified
 source, normalizes the event, records it, and enqueues it before responding
 `202 Accepted`.
 
-The console is protected by path-based Cloudflare Access using Cloudflare
-account membership. The public OIDC ingress remains outside those protected
-paths. It uses D1 for dynamic policy and audit records; the Telegram Bot Token
-remains a Worker Secret and is never returned by an API.
+The console is protected by path-based Cloudflare Access using only its GitHub
+identity provider and a deployment-private explicit Operator allow policy. The
+public OIDC ingress remains outside those protected paths. The Worker validates
+the resulting Access JWT without owning an OAuth callback, GitHub token, or
+application session. It uses D1 for dynamic policy and audit records; the
+Telegram Bot Token remains a Worker Secret and is never returned by an API.
 
 ## Alternatives
 

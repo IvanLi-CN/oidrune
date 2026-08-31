@@ -84,7 +84,12 @@ _Avoid_: Caller destination
 
 ## Administration
 
+**Operator**:
+A person authorized to administer one Oidrune deployment through an explicitly
+approved GitHub identity.
+_Avoid_: Cloudflare account member, Source
+
 **Operator Console**:
-The Cloudflare Access-protected interface for Oidrune configuration and audit
-operations.
+The administrative interface through which an Operator manages Oidrune
+configuration and audit operations.
 _Avoid_: Public dashboard

@@ -79,10 +79,13 @@ or workflow release.
 
 ## Administrator API
 
-Every `/api/admin/*` request requires a valid Cloudflare Access identity from
-the configured account-member policy. The Worker verifies the authenticated
-identity in addition to Access path protection. Browser assets use the
-`/console/` base path so the same Access path policy protects them.
+Every `/api/admin/*` request requires a valid Cloudflare Access identity
+authenticated through the GitHub identity provider and admitted by the
+deployment-private explicit Operator allow policy. The Access application
+enables no other interactive login method. The Worker verifies the resulting
+Access JWT in addition to Access path protection; it does not receive or store a
+GitHub access token. Browser assets use the `/console/` base path so the same
+Access path policy protects them.
 
 | Operation | Endpoint | Rules |
 | --- | --- | --- |

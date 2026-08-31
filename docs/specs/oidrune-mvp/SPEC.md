@@ -16,12 +16,12 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - GitHub 项目零 Oidrune/Telegram 静态凭据地发送工作流完成通知。
 - 仅从可验证、可审计的 GitHub Actions 来源接受事件。
 - 将 Telegram 投递与调用方 CI/发布结果解耦。
-- 让 Cloudflare 账户成员通过控制台管理运行时策略与失败投递。
+- 让显式批准的 GitHub Operator 通过控制台管理运行时策略与失败投递。
 
 ### Non-goals
 
 - 多目的地、自由文本广播、第二消息平台或 GitHub App ingress。
-- 自建账号、密码、GitHub OAuth 或多环境部署。
+- 自建账号、密码、Worker-owned OAuth callback 或多环境部署。
 - 替调用方发布、回滚、取消或修改 GitHub 资源。
 
 ## 范围（Scope）
@@ -48,6 +48,7 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - [Custom Domain and Path-Level Access](../../adr/0004-custom-domain-path-access.md)
 - [Leased Delivery Claims](../../adr/0005-leased-delivery-claims.md)
 - [Portable Gateway Selection](../../adr/0006-portable-gateway-selection.md)
+- [GitHub-Only Operator Identity Through Cloudflare Access](../../adr/0007-github-only-operator-identity.md)
 
 ## 需求（Requirements）
 
@@ -101,9 +102,18 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - The caller-facing default for a failed handoff is warning after bounded
   client retry. A caller may choose `on_gateway_failure: fail`; that choice
   affects only its notification job, not a completed release operation.
-- All console and `/api/admin/*` operations MUST require Cloudflare Access
-  account-member identity. The Bot Token MUST remain a Worker Secret and MUST
-  never be read from D1 or returned to a browser.
+- All console and `/api/admin/*` operations MUST require a valid Cloudflare
+  Access identity authenticated only through the GitHub identity provider and
+  admitted by an explicit deployment-private Operator allow policy. Other
+  interactive login methods, including Cloudflare identity and one-time PIN,
+  MUST NOT be enabled. The Worker MUST validate the Access JWT, MUST NOT own an
+  OAuth callback or GitHub session, and MUST NOT store or use a GitHub access
+  token. The Bot Token MUST remain a Worker Secret and MUST never be read from
+  D1 or returned to a browser.
+- GitHub Operator identities, OAuth application values, Access identity-provider
+  details, Access audience and team domain, and deployed policy values MUST NOT
+  be committed to the repository. Tests and documentation MAY use only clearly
+  fictitious placeholders.
 - Successful events MUST be retained for 30 days; failed and DLQ events for 90
   days. OIDC JWTs, Bot Tokens, and raw request bodies MUST NOT be persisted.
 
@@ -195,16 +205,21 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - Given a caller-provided `summary`, when delivery succeeds, then the Telegram
   body equals the normalized caller body and contains no Oidrune-added event
   metadata.
-- Given a Cloudflare account member, when they access the console path, then
-  they can manage only the defined operations; an unauthenticated request is
-  blocked by Access and the API rejects missing identity.
+- Given an explicitly approved GitHub Operator, when they authenticate through
+  Access and open the console, then they can manage only the defined operations.
+  A GitHub identity outside the deployment-private allow policy and every
+  non-GitHub login method are denied; the API rejects a missing or invalid
+  Access identity.
+- Given a GitHub-only Operator authentication change or failure, the public
+  GitHub Actions OIDC ingress remains reachable and independently authenticated.
 
 ## 非功能性验收 / 质量门槛
 
 ### Testing
 
 - Unit: policy union, claim matrix, event normalization, Telegram formatting,
-  retention decisions, and release-SHA transitions.
+  retention decisions, release-SHA transitions, and a repository privacy guard
+  against checked-in Operator allowlists or Access IdP configuration.
 - Worker integration: JWKS verification fixtures, D1 transactions, Queue/DLQ
   behavior, Durable Object replay rejection, and Access identity checks.
 - E2E: console access state, CRUD operations, audit filtering, DLQ retry, and
@@ -245,6 +260,9 @@ The owner confirmed the current desktop and mobile renders.
 
 - Cloudflare Access, D1, Queue, and Durable Object are external configuration
   tasks and require separate deployment authority.
+- GitHub OAuth application creation, Access identity-provider and policy
+  changes, login-method removal, and real-browser identity verification are
+  external configuration tasks and require separate deployment authority.
 - A Telegram bot must be added to the chosen group/channel with the permissions
   Telegram requires; private-chat recipients must start the bot first.
 - Callers are responsible for adding the no-secret final notification job; a

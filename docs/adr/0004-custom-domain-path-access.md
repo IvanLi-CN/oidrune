@@ -5,8 +5,9 @@ The Default Gateway uses an operator-configured Cloudflare Custom Domain with
 `/api/admin*` paths, while the public workflow ingress remains reachable and is
 authenticated by GitHub OIDC inside the Worker. One Access application covers
 the protected paths so the Worker can validate a single Access audience; its
-policy allows only the configured account owner. A Fork Deployment may instead
-use its Cloudflare `workers.dev` hostname with equivalent path-level Access.
+policy allows only the explicitly approved GitHub Operator identity. A Fork
+Deployment may instead use its Cloudflare `workers.dev` hostname with
+equivalent path-level Access.
 
 ## Considered Options
 

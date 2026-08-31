@@ -26,15 +26,17 @@ decides whether the source is admitted, and alone controls the destination.
   returns after durable queue acceptance.
 - **Delivery worker**: sends Telegram messages, retries transient failures,
   and records terminal failures in the DLQ and audit log.
-- **Operator console**: protected with Cloudflare Access; manages source
-  admission, the one destination, trusted Oidrune workflow releases, audit
-  records, retries, and fixed-format test messages.
+- **Operator console**: protected with GitHub-only authentication brokered by
+  Cloudflare Access; manages source admission, the one destination, trusted
+  Oidrune workflow releases, audit records, retries, and fixed-format test
+  messages.
 
 ## Non-goals
 
 - Multiple Telegram destinations, arbitrary broadcast text, or caller-selected
   destinations.
 - Discord, Slack, GitHub App Webhook, or generic webhook adapters.
-- A self-managed account system, password authentication, or OAuth callback.
+- A self-managed account system, password authentication, or Worker-owned OAuth
+  callback.
 - Staging or multi-environment operation.
 - Automatic rollback, cancellation, or mutation of a caller's GitHub release.
