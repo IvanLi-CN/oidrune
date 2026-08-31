@@ -1,5 +1,14 @@
 import { applyD1Migrations, SELF, env as testEnv } from "cloudflare:test";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { exportJWK, generateKeyPair, SignJWT } from "jose";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { hasTrustedWorkflowReference } from "../../src/domain/policy";
 import type {
   DeliveryQueueMessage,
@@ -11,6 +20,16 @@ import type { Env } from "../../src/worker/bindings";
 import { deliverBatch } from "../../src/worker/delivery";
 
 const bindings = testEnv as unknown as Env;
+const accessAudience = "oidrune-access-test";
+const accessTeamDomain = "https://access-test.example.invalid";
+const accessKeys = await generateKeyPair("RS256");
+const wrongAccessKeys = await generateKeyPair("RS256");
+const accessJwk = {
+  ...(await exportJWK(accessKeys.publicKey)),
+  alg: "RS256",
+  kid: "access-test-key",
+  use: "sig",
+};
 
 declare const __OIDRUNE_D1_MIGRATIONS__: Array<{
   name: string;
@@ -19,6 +38,24 @@ declare const __OIDRUNE_D1_MIGRATIONS__: Array<{
 
 beforeAll(async () => {
   await applyD1Migrations(bindings.DB, __OIDRUNE_D1_MIGRATIONS__);
+});
+
+beforeEach(() => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/cdn-cgi/access/certs")) {
+        return new Response(JSON.stringify({ keys: [accessJwk] }), {
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response("not found", { status: 404 });
+    }),
+  );
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe("Worker security boundaries", () => {
@@ -121,6 +158,31 @@ describe("Worker security boundaries", () => {
     expect(headResponse.headers.get("location")).toBe("/console/");
     expect(await headResponse.text()).toBe("");
     expect(postResponse.status).toBe(404);
+  });
+
+  it("accepts only Access JWTs with the configured issuer and audience", async () => {
+    const accessEnv = {
+      ...bindings,
+      ACCESS_AUD: accessAudience,
+      ACCESS_TEAM_DOMAIN: accessTeamDomain,
+    };
+    const validResponse = await accessRequest(
+      accessEnv,
+      await makeAccessToken({ email: undefined }),
+    );
+    expect(validResponse.status).toBe(200);
+
+    for (const token of [
+      await makeAccessToken({ issuer: "https://wrong.example.invalid" }),
+      await makeAccessToken({ audience: "wrong-audience" }),
+      await makeAccessToken({ privateKey: wrongAccessKeys.privateKey }),
+    ]) {
+      const response = await accessRequest(accessEnv, token);
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toMatchObject({
+        error: "invalid_access_identity",
+      });
+    }
   });
 
   it("provisions the D1 schema and reserves an OIDC jti once", async () => {
@@ -248,6 +310,37 @@ describe("Worker security boundaries", () => {
     }
   });
 });
+
+async function accessRequest(env: Env, token: string): Promise<Response> {
+  return createApp().fetch(
+    new Request("https://example.com/api/admin/config", {
+      headers: { "cf-access-jwt-assertion": token },
+    }),
+    env,
+    {} as ExecutionContext,
+  );
+}
+
+async function makeAccessToken({
+  audience = accessAudience,
+  email = "operator@example.invalid",
+  issuer = accessTeamDomain,
+  privateKey = accessKeys.privateKey,
+}: {
+  audience?: string;
+  email?: string;
+  issuer?: string;
+  privateKey?: typeof accessKeys.privateKey;
+} = {}): Promise<string> {
+  const payload = { sub: "operator-test-sub", ...(email ? { email } : {}) };
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: "RS256", kid: "access-test-key" })
+    .setIssuer(issuer)
+    .setAudience(audience)
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(privateKey);
+}
 
 function notificationEvent(): NotificationEvent {
   const now = new Date().toISOString();

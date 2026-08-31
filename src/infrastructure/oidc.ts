@@ -63,7 +63,10 @@ export async function verifyAccessIdentity(
     createRemoteJWKSet(new URL(`${base}/cdn-cgi/access/certs`));
   accessJwks.set(base, jwks);
   try {
-    const verified = await jwtVerify(token, jwks, { audience: env.ACCESS_AUD });
+    const verified = await jwtVerify(token, jwks, {
+      audience: env.ACCESS_AUD,
+      issuer: base,
+    });
     return {
       subject: requiredClaim(verified.payload, "sub"),
       email: optionalClaim(verified.payload, "email") ?? null,
