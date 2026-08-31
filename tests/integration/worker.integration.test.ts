@@ -203,7 +203,6 @@ describe("Worker security boundaries", () => {
       await makeAccessToken({ issuer: "https://wrong.example.invalid" }),
       await makeAccessToken({ audience: "wrong-audience" }),
       await makeAccessToken({ privateKey: wrongAccessKeys.privateKey }),
-      await makeAccessToken({ subject: null }),
     ]) {
       const response = await accessRequest(accessEnv, token);
       expect(response.status).toBe(401);
@@ -211,6 +210,15 @@ describe("Worker security boundaries", () => {
         error: "invalid_access_identity",
       });
     }
+
+    const missingSubjectResponse = await accessRequest(
+      accessEnv,
+      await makeAccessToken({ subject: null }),
+    );
+    expect(missingSubjectResponse.status).toBe(401);
+    await expect(missingSubjectResponse.json()).resolves.toMatchObject({
+      error: "invalid_oidc_claims",
+    });
   });
 
   it("provisions the D1 schema and reserves an OIDC jti once", async () => {
