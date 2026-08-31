@@ -152,6 +152,22 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --var ACCESS_AUD:${{ vars.OIDRUNE_ACCESS_AUD }} --var ACCESS_TEAM_DOMAIN:${{ vars.OIDRUNE_ACCESS_TEAM_DOMAIN }}
+      - name: Verify production route boundaries
+        run: |
+          set -euo pipefail
+          origin='https://oidrune.707979.xyz'
+          root_headers="$(curl --silent --show-error --max-time 10 --output /dev/null --dump-header - "${origin}/")"
+          root_status="$(awk 'NR == 1 { print $2 }' <<<"${root_headers}")"
+          root_location="$(awk 'BEGIN { IGNORECASE=1 } /^location:/ { sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit }' <<<"${root_headers}")"
+          console_status="$(curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code}' "${origin}/console/")"
+          if [[ "${root_status}" != '302' || "${root_location}" != '/console/' ]]; then
+            echo 'The production root does not redirect to the protected console.' >&2
+            exit 1
+          fi
+          if [[ "${console_status}" != '302' ]]; then
+            echo 'The production console is not protected by Cloudflare Access.' >&2
+            exit 1
+          fi
       - name: Publish stable GitHub release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
         with:
