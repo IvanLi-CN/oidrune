@@ -79,11 +79,11 @@ docs/               product, ADR, quality contract, and Specs
 1. Keep `/v1/events/workflow-completed` outside Access and preserve its existing
    GitHub Actions OIDC verification and Source Admission behavior.
 2. Keep `/console*` and `/api/admin*` behind the same Access application and
-   continue validating `cf-access-jwt-assertion` against `ACCESS_AUD` and
-   `ACCESS_TEAM_DOMAIN` in the Worker.
-3. Treat the verified Access `sub` as the stable audit actor. An `email` claim
-   may be retained as optional identity context but must not become the
-   authorization source.
+   continue validating `cf-access-jwt-assertion` with the configured audience,
+   normalized team-domain issuer, signature, and validity window in the Worker.
+3. Treat the verified Access `sub` as the stable audit actor and persist it for
+   every operator audit entry. An `email` claim may be retained as optional
+   identity context but must not become the authorization source or audit key.
 4. Do not add Worker routes for OAuth initiation or callback, a session store,
    GitHub API calls, GitHub token persistence, or authentication dependencies.
 5. Cover the unchanged Worker trust boundary with integration tests: missing or

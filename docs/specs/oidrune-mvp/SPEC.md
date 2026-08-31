@@ -106,10 +106,13 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   Access identity authenticated only through the GitHub identity provider and
   admitted by an explicit deployment-private Operator allow policy. Other
   interactive login methods, including Cloudflare identity and one-time PIN,
-  MUST NOT be enabled. The Worker MUST validate the Access JWT, MUST NOT own an
-  OAuth callback or GitHub session, and MUST NOT store or use a GitHub access
-  token. The Bot Token MUST remain a Worker Secret and MUST never be read from
-  D1 or returned to a browser.
+  MUST NOT be enabled. The Worker MUST validate the Access JWT signature,
+  configured team-domain issuer, exact audience, validity window, and required
+  `sub` claim. It MUST use `sub` as the stable audit actor; `email` is optional
+  identity context only. The Worker MUST NOT own an OAuth callback or GitHub
+  session, and MUST NOT store or use a GitHub access token. The Bot Token MUST
+  remain a Worker Secret and MUST never be read from D1 or returned to a
+  browser.
 - GitHub Operator identities, OAuth application values, Access identity-provider
   details, Access audience and team domain, and deployed policy values MUST NOT
   be committed to the repository. Tests and documentation MAY use only clearly
@@ -209,7 +212,9 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   Access and open the console, then they can manage only the defined operations.
   A GitHub identity outside the deployment-private allow policy and every
   non-GitHub login method are denied; the API rejects a missing or invalid
-  Access identity.
+  Access identity, including an invalid issuer, audience, signature, validity
+  window, or required `sub` claim. Mutating operations record that `sub` as the
+  audit actor even when an `email` claim is present.
 - Given a GitHub-only Operator authentication change or failure, the public
   GitHub Actions OIDC ingress remains reachable and independently authenticated.
 
