@@ -432,7 +432,7 @@ export class OidruneRepository {
         )
         .bind(retriedAt, actor.subject, eventId),
       this.auditStatement(
-        actor.email ?? actor.subject,
+        actor.subject,
         "dead_letter.retry_queued",
         eventId,
         "stored normalized event is awaiting queue delivery",
@@ -452,7 +452,7 @@ export class OidruneRepository {
         )
         .bind(inDays(90), eventId),
       this.auditStatement(
-        actor.email ?? actor.subject,
+        actor.subject,
         "dead_letter.retry_queue_failed",
         eventId,
         "queue handoff failed; retry remains available",
@@ -474,12 +474,7 @@ export class OidruneRepository {
     subject: string,
     detail: string,
   ): Promise<void> {
-    await this.auditStatement(
-      actor.email ?? actor.subject,
-      action,
-      subject,
-      detail,
-    ).run();
+    await this.auditStatement(actor.subject, action, subject, detail).run();
   }
 
   async auditSystem(

@@ -168,14 +168,42 @@ describe("Worker security boundaries", () => {
     };
     const validResponse = await accessRequest(
       accessEnv,
-      await makeAccessToken({ email: undefined }),
+      await makeAccessToken(),
     );
     expect(validResponse.status).toBe(200);
+
+    const auditLabel = `operator destination ${crypto.randomUUID()}`;
+    const auditResponse = await createApp().fetch(
+      new Request("https://example.com/api/admin/destination", {
+        method: "PUT",
+        headers: {
+          "cf-access-jwt-assertion": await makeAccessToken({
+            email: "operator@example.invalid",
+          }),
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          chatId: "-1001234567890",
+          displayName: auditLabel,
+          confirmation: true,
+        }),
+      }),
+      accessEnv,
+      {} as ExecutionContext,
+    );
+    expect(auditResponse.status).toBe(204);
+    const auditEntry = await bindings.DB.prepare(
+      "SELECT actor FROM audit_log WHERE action = 'destination.updated' AND subject = 'destination' AND detail = ? ORDER BY occurred_at DESC LIMIT 1",
+    )
+      .bind(auditLabel)
+      .first<{ actor: string }>();
+    expect(auditEntry?.actor).toBe("operator-test-sub");
 
     for (const token of [
       await makeAccessToken({ issuer: "https://wrong.example.invalid" }),
       await makeAccessToken({ audience: "wrong-audience" }),
       await makeAccessToken({ privateKey: wrongAccessKeys.privateKey }),
+      await makeAccessToken({ subject: null }),
     ]) {
       const response = await accessRequest(accessEnv, token);
       expect(response.status).toBe(401);
@@ -323,16 +351,21 @@ async function accessRequest(env: Env, token: string): Promise<Response> {
 
 async function makeAccessToken({
   audience = accessAudience,
-  email = "operator@example.invalid",
+  email,
   issuer = accessTeamDomain,
   privateKey = accessKeys.privateKey,
+  subject = "operator-test-sub",
 }: {
   audience?: string;
   email?: string;
   issuer?: string;
   privateKey?: typeof accessKeys.privateKey;
+  subject?: string | null;
 } = {}): Promise<string> {
-  const payload = { sub: "operator-test-sub", ...(email ? { email } : {}) };
+  const payload = {
+    ...(subject ? { sub: subject } : {}),
+    ...(email ? { email } : {}),
+  };
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "RS256", kid: "access-test-key" })
     .setIssuer(issuer)
