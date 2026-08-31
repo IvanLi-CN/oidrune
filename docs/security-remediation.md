@@ -30,5 +30,6 @@ configuration and are not changed by a repository pull request.
    This redirects HTTP requests before they reach the Worker, including the
    public OIDC ingress, and avoids an origin-level redirect loop.
 
-No Cloudflare token, GitHub secret, account identifier, or production setting
-is stored in this repository.
+No Cloudflare token, GitHub secret, Operator identity, OAuth application value,
+account identifier, Access policy value, or production setting is stored in
+this repository.

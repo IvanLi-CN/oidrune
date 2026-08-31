@@ -11,6 +11,9 @@
   affected callers must upgrade to another approved SHA.
 - Prepared and failed release snapshots retain release-processing state only;
   they never restore a revoked Trusted Workflow Release.
+- GitHub-only Operator identity through Cloudflare Access is the current
+  authentication contract; external Access and GitHub configuration remains
+  separately authorized deployment work.
 
 ## Replacements / Background
 

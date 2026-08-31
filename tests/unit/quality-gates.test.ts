@@ -67,4 +67,22 @@ describe("quality-gate declaration", () => {
       }
     }
   });
+
+  it("keeps Access identity configuration deployment-private", async () => {
+    const wrangler = await readFile("wrangler.jsonc", "utf8");
+    expect(wrangler).not.toMatch(
+      /ACCESS_AUD|ACCESS_TEAM_DOMAIN|client_id|client_secret|identity_provider|operator[_-]?allowlist/i,
+    );
+
+    const release = await readFile(".github/workflows/release.yml", "utf8");
+    expect(release).toContain(
+      "ACCESS_AUD: $" + "{{ vars.OIDRUNE_ACCESS_AUD }}",
+    );
+    expect(release).toContain(
+      "ACCESS_TEAM_DOMAIN: $" + "{{ vars.OIDRUNE_ACCESS_TEAM_DOMAIN }}",
+    );
+    expect(release).not.toMatch(
+      /ACCESS_AUD:\s*[^$\s]|ACCESS_TEAM_DOMAIN:\s*[^$\s]/,
+    );
+  });
 });

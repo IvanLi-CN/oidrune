@@ -17,7 +17,8 @@ permission.
 - Owner/repository union allowlist, trusted workflow-release SHA policy, and
   GitHub-hosted runner requirement.
 - Durable acceptance, automatic Telegram retry, DLQ, and an operator console.
-- Cloudflare Access authentication for the console and administrator APIs.
+- GitHub-only Operator authentication through Cloudflare Access for the console
+  and administrator APIs.
 
 Each deployment exposes an operator-configured Public Protocol Endpoint. The
 public OIDC ingress remains reachable at `/v1/events/workflow-completed`;
@@ -39,12 +40,14 @@ quality aggregate, or the focused `check`, `typecheck`, `test:unit`,
 `test:integration`, and `test:e2e` scripts. The console demo is deterministic
 and does not call Cloudflare Access, D1, Queues, or Telegram.
 
-Provision the dedicated Cloudflare D1, queues, Public Protocol Endpoint, Access
-application, and Worker Secrets only during the separately authorized
-deployment phase. A Fork Deployment may use `workers.dev` to get started;
-Custom Domains remain the production recommendation. `wrangler.jsonc` declares
-the deployment's Cloudflare bindings; destination metadata and Access runtime
-values remain outside the source tree.
+Provision the dedicated Cloudflare D1, queues, Public Protocol Endpoint,
+GitHub-backed Access application, and Worker Secrets only during the separately
+authorized deployment phase. A Fork Deployment may use `workers.dev` to get
+started; Custom Domains remain the production recommendation. `wrangler.jsonc`
+declares the deployment's Cloudflare bindings; destination metadata and Access
+runtime values remain outside the source tree. GitHub Operator identities,
+OAuth configuration, Access identity-provider details, and policy values are
+also deployment-private and must not be committed.
 
 ## Production Smoke Test
 
