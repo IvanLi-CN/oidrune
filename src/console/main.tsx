@@ -91,6 +91,7 @@ const navigation: Array<{ label: Section; icon: typeof CloudCog }> = [
 ];
 
 const brandLockupSrc = `${import.meta.env.BASE_URL}brand/v25/oidrune-lockup-b2-on-dark.svg`;
+const brandMarkSrc = `${import.meta.env.BASE_URL}brand/v25/oidrune-mark-reverse.svg`;
 
 function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -160,6 +161,12 @@ function App() {
       <aside className="sidebar" aria-label="Console navigation">
         <div className="brand">
           <img className="brand-lockup" src={brandLockupSrc} alt="Oidrune" />
+          <img
+            className="brand-mark-compact"
+            src={brandMarkSrc}
+            alt=""
+            aria-hidden="true"
+          />
         </div>
         <nav className="nav-list">
           {navigation.map(({ label, icon: Icon }) => (

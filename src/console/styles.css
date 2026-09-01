@@ -57,6 +57,12 @@ input:focus-visible {
   object-fit: contain;
   object-position: left center;
 }
+.brand-mark-compact {
+  display: none;
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
 .nav-list {
   display: grid;
   gap: 5px;
@@ -608,8 +614,10 @@ tr:last-child td {
     flex: 0 0 auto;
   }
   .brand-lockup {
-    width: 128px;
-    height: 40px;
+    display: none;
+  }
+  .brand-mark-compact {
+    display: block;
   }
   .nav-list {
     display: flex;

@@ -34,6 +34,7 @@ describe("Oidrune v25 brand asset contract", () => {
       join(sourceRoot, "oidrune-wordmark.svg"),
       join(assetRoot, "oidrune-favicon.svg"),
       join(assetRoot, "oidrune-lockup-b2-on-dark.svg"),
+      join(assetRoot, "oidrune-mark-reverse.svg"),
       join(assetRoot, "oidrune-app-a3.svg"),
       join(assetRoot, "oidrune-app-maskable.svg"),
     ];
@@ -135,5 +136,6 @@ describe("Oidrune v25 brand asset contract", () => {
       /serviceWorker|navigator\.serviceWorker|caches\.open/,
     );
     expect(runtime).toContain("oidrune-lockup-b2-on-dark.svg");
+    expect(runtime).toContain("oidrune-mark-reverse.svg");
   });
 });
