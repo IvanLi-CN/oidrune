@@ -134,7 +134,7 @@ async function serveConsoleAssets(
   const assetUrl = new URL(context.req.raw.url);
   assetUrl.pathname =
     assetUrl.pathname === "/console" || assetUrl.pathname === "/console/"
-      ? "/index.html"
+      ? "/"
       : assetUrl.pathname.replace(/^\/console/, "");
   return context.env.ASSETS.fetch(new Request(assetUrl, context.req.raw));
 }

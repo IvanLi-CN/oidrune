@@ -221,6 +221,34 @@ describe("Worker security boundaries", () => {
     });
   });
 
+  it("serves the protected console entry from the assets root", async () => {
+    const assetsFetch = vi.fn(
+      async (_request: RequestInfo | URL) => new Response("console"),
+    );
+    const accessEnv = {
+      ...bindings,
+      ACCESS_AUD: accessAudience,
+      ACCESS_TEAM_DOMAIN: accessTeamDomain,
+      ASSETS: { fetch: assetsFetch },
+    } as unknown as Env;
+
+    const response = await createApp().fetch(
+      new Request("https://example.com/console/", {
+        headers: {
+          "cf-access-jwt-assertion": await makeAccessToken(),
+        },
+      }),
+      accessEnv,
+      {} as ExecutionContext,
+    );
+
+    expect(response.status).toBe(200);
+    expect(assetsFetch).toHaveBeenCalledOnce();
+    const assetRequest = assetsFetch.mock.calls[0]?.[0];
+    expect(assetRequest).toBeInstanceOf(Request);
+    expect(new URL((assetRequest as Request).url).pathname).toBe("/");
+  });
+
   it("provisions the D1 schema and reserves an OIDC jti once", async () => {
     const tables = await bindings.DB.prepare(
       "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('notification_events', 'audit_log') ORDER BY name",
