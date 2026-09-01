@@ -1,0 +1,170 @@
+{
+  "reference": "docs/specs/oidrune-mvp/assets/logo/oidrune-b2-refinement-v25-reference.png",
+  "rendered": "/tmp/oidrune-master.png",
+  "dimensions": {
+    "width": 1536,
+    "height": 1536
+  },
+  "vector_integrity": {
+    "image": true,
+    "text": true,
+    "mask": true,
+    "clipPath": true,
+    "filter": true
+  },
+  "pixel_metrics": {
+    "exact_pixels": 2358426,
+    "total_pixels": 2359296,
+    "exact_pixel_rate": 0.9996312459309896,
+    "changed_pixels": 870,
+    "mean_absolute_error_rgb": 0.0004570572464554398,
+    "rmse_rgb": 0.037063659707005946,
+    "max_channel_error": 12
+  },
+  "cells": {
+    "A1": {
+      "changed_pixels": 0,
+      "max_channel_error": 0,
+      "palette_bboxes": {
+        "ink": {
+          "reference": [168, 152, 364, 344],
+          "trace": [168, 152, 364, 344],
+          "matches": true
+        },
+        "lime": {
+          "reference": [89, 80, 423, 416],
+          "trace": [89, 80, 423, 416],
+          "matches": true
+        }
+      }
+    },
+    "A2": {
+      "changed_pixels": 0,
+      "max_channel_error": 0,
+      "palette_bboxes": {
+        "ink": {
+          "reference": [168, 152, 364, 344],
+          "trace": [168, 152, 364, 344],
+          "matches": true
+        },
+        "lime": {
+          "reference": [88, 80, 424, 416],
+          "trace": [88, 80, 424, 416],
+          "matches": true
+        }
+      }
+    },
+    "A3": {
+      "changed_pixels": 0,
+      "max_channel_error": 0,
+      "palette_bboxes": {
+        "ink": {
+          "reference": [88, 80, 424, 416],
+          "trace": [88, 80, 424, 416],
+          "matches": true
+        },
+        "lime": {
+          "reference": [168, 152, 364, 344],
+          "trace": [168, 152, 364, 344],
+          "matches": true
+        }
+      }
+    },
+    "B1": {
+      "changed_pixels": 183,
+      "max_channel_error": 8,
+      "palette_bboxes": {
+        "ink": {
+          "reference": [73, 159, 456, 325],
+          "trace": [73, 159, 456, 325],
+          "matches": true
+        },
+        "lime": {
+          "reference": [115, 207, 185, 277],
+          "trace": [115, 207, 185, 277],
+          "matches": true
+        }
+      }
+    },
+    "B2": {
+      "changed_pixels": 183,
+      "max_channel_error": 8,
+      "palette_bboxes": {
+        "ink": {
+          "reference": [73, 159, 456, 325],
+          "trace": [73, 159, 456, 325],
+          "matches": true
+        },
+        "lime": {
+          "reference": [133, 212, 244, 272],
+          "trace": [133, 212, 244, 272],
+          "matches": true
+        }
+      }
+    },
+    "B3": {
+      "changed_pixels": 168,
+      "max_channel_error": 12,
+      "palette_bboxes": {
+        "ink": {
+          "reference": [40, 137, 472, 347],
+          "trace": [40, 137, 472, 347],
+          "matches": true
+        },
+        "lime": {
+          "reference": [77, 171, 429, 313],
+          "trace": [77, 171, 429, 313],
+          "matches": true
+        }
+      }
+    },
+    "C1": {
+      "changed_pixels": 168,
+      "max_channel_error": 12,
+      "palette_bboxes": {
+        "ink": {
+          "reference": [28, 120, 484, 340],
+          "trace": [28, 120, 484, 340],
+          "matches": true
+        },
+        "lime": {
+          "reference": [71, 161, 429, 299],
+          "trace": [71, 161, 429, 299],
+          "matches": true
+        }
+      }
+    },
+    "C2": {
+      "changed_pixels": 168,
+      "max_channel_error": 12,
+      "palette_bboxes": {
+        "ink": {
+          "reference": [71, 161, 429, 299],
+          "trace": [71, 161, 429, 299],
+          "matches": true
+        },
+        "lime": {
+          "reference": [28, 120, 484, 340],
+          "trace": [28, 120, 484, 340],
+          "matches": true
+        }
+      }
+    },
+    "C3": {
+      "changed_pixels": 0,
+      "max_channel_error": 0,
+      "palette_bboxes": {
+        "ink": {
+          "reference": [89, 62, 423, 398],
+          "trace": [89, 62, 423, 398],
+          "matches": true
+        },
+        "lime": {
+          "reference": [168, 134, 364, 326],
+          "trace": [168, 134, 364, 326],
+          "matches": true
+        }
+      }
+    }
+  }
+}

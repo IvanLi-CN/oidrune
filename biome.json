@@ -7,7 +7,10 @@
       "!**/coverage",
       "!**/playwright-report",
       "!**/test-results",
-      "!**/.wrangler"
+      "!**/.wrangler",
+      "!**/tmp",
+      "!**/output",
+      "!**/.impeccable"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2 },

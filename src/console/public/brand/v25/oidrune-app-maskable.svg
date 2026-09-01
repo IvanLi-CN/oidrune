@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Oidrune maskable application icon</title>
+<rect width="512" height="512" fill="#121a2b"/>
+  <g transform="translate(256 256) scale(1.25)"><path d="M72 -98 A116 116 0 1 0 72 98" fill="none" stroke="#d8f366" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<circle r="54" fill="#d8f366"/><circle r="27" fill="#121a2b"/>
+<path d="M70 -35H132 M70 0H132 M70 35H132" fill="none" stroke="#d8f366" stroke-width="22" stroke-linecap="round"/> </g>
+</svg>
