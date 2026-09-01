@@ -19,6 +19,8 @@ pixel-derived shape in reconstructed SVG artwork.
 - `source/oidrune-a1.svg` through `source/oidrune-c3.svg` are the nine locked
   variants. The same variants are copied to the versioned runtime directory at
   `src/console/public/brand/v25/svg/`.
+- `proof/logo-nine-grid-v25.png` is the deterministic render of the master for
+  final nine-grid review.
 - `proof/logo-reconstruction.json` and `proof/logo-reconstruction-diff.png`
   record the deterministic raster comparison against the reference.
 

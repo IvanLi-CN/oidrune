@@ -1,9 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="480" height="140" viewBox="0 0 480 140" role="img" aria-labelledby="title">
-  <title id="title">Oidrune B3 inverse lockup</title>
+  <title id="title">Oidrune B2 inverse console lockup</title>
 <rect x="10" y="10" width="456" height="120" rx="30" fill="#121a2b"/>
   <g transform="translate(74 70) scale(.40)"><path d="M72 -98 A116 116 0 1 0 72 98" fill="none" stroke="#d8f366" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-<circle r="54" fill="#d8f366"/><circle r="27" fill="#121a2b"/>
-<path d="M70 -35H132 M70 0H132 M70 35H132" fill="none" stroke="#d8f366" stroke-width="22" stroke-linecap="round"/> </g>
+<rect x="-48" y="-70" width="205" height="140" rx="35" fill="#d8f366"/>
+<circle r="27" fill="#121a2b"/>
+<path d="M70 -35H132 M70 0H132 M70 35H132" fill="none" stroke="#121a2b" stroke-width="22" stroke-linecap="round"/> </g>
   <g transform="translate(164 94) scale(0.034 -0.034)" fill="#d8f366">
     <path transform="translate(0 0)" d="M1042 952Q1180 779 1180 543Q1180 303 1042 132.5Q904 -38 623 -38Q342 -38 204 132.5Q66 303 66 543Q66 779 204 952Q342 1125 623 1125Q904 1125 1042 952ZM622 884Q497 884 429.5 795.5Q362 707 362 543Q362 379 429.5 290Q497 201 622 201Q747 201 814 290Q881 379 881 543Q881 707 814 795.5Q747 884 622 884Z"/>
     <path transform="translate(1251 0)" d="M426 1090V0H137V1090ZM426 1483V1220H137V1483Z"/>
