@@ -9,23 +9,23 @@
   "theme_color": "#121A2B",
   "icons": [
     {
-      "src": "/console/brand/v25/oidrune-app-192x192.png",
+      "src": "/console/brand/v25/oidrune-app-192x192.8ec25c45fbf9.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/console/brand/v25/oidrune-app-512x512.png",
+      "src": "/console/brand/v25/oidrune-app-512x512.81035f66c2ea.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/console/brand/v25/oidrune-app-maskable-192x192.png",
+      "src": "/console/brand/v25/oidrune-app-maskable-192x192.1044a92a7476.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/console/brand/v25/oidrune-app-maskable-512x512.png",
+      "src": "/console/brand/v25/oidrune-app-maskable-512x512.d4697832d7e9.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

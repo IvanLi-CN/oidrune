@@ -243,10 +243,41 @@ describe("Worker security boundaries", () => {
     );
 
     expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe(
+      "no-cache, must-revalidate",
+    );
     expect(assetsFetch).toHaveBeenCalledOnce();
     const assetRequest = assetsFetch.mock.calls[0]?.[0];
     expect(assetRequest).toBeInstanceOf(Request);
     expect(new URL((assetRequest as Request).url).pathname).toBe("/");
+  });
+
+  it("marks content-hashed brand assets immutable at the Worker boundary", async () => {
+    const assetsFetch = vi.fn(
+      async (_request: RequestInfo | URL) =>
+        new Response("icon", { headers: { etag: '"asset"' } }),
+    );
+    const accessEnv = {
+      ...bindings,
+      ACCESS_AUD: accessAudience,
+      ACCESS_TEAM_DOMAIN: accessTeamDomain,
+      ASSETS: { fetch: assetsFetch },
+    } as unknown as Env;
+
+    const response = await createApp().fetch(
+      new Request(
+        "https://example.com/console/brand/v25/oidrune-app-192x192.0123456789ab.png",
+        { headers: { "cf-access-jwt-assertion": await makeAccessToken() } },
+      ),
+      accessEnv,
+      {} as ExecutionContext,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe(
+      "public, max-age=31536000, immutable",
+    );
+    expect(response.headers.get("etag")).toBe('"asset"');
   });
 
   it("provisions the D1 schema and reserves an OIDC jti once", async () => {

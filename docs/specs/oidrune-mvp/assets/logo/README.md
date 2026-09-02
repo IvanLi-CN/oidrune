@@ -16,6 +16,8 @@ pixel-derived shape in reconstructed SVG artwork.
 - `source/oidrune-mark-*.svg` contains the independent relay mark paths.
 - `source/oidrune-wordmark.svg` contains the independent outlined wordmark
   paths. It contains no SVG `text` element or font dependency.
+- `source/oidrune-app-maskable.svg` is the opaque Navy maskable application
+  source with the mark kept inside the platform safe zone.
 - `source/oidrune-a1.svg` through `source/oidrune-c3.svg` are the nine locked
   variants. The same variants are copied to the versioned runtime directory at
   `src/console/public/brand/v25/svg/`.
@@ -27,10 +29,18 @@ pixel-derived shape in reconstructed SVG artwork.
 The runtime palette is intentionally limited to Ink Navy `#121A2B`, Signal Lime
 `#D8F366`, and Paper `#F6F7F9`. A2 is the light favicon and regular application
 source. A3 is retained as the dark/inverse application and
-favicon source. The maskable icon uses an opaque Navy canvas with a mark
-occupying about 64% of the canvas inside the platform safe zone. The mark represents a
+favicon source. Published browser and application files in
+`src/console/public/brand/v25/` use a 12-character SHA-256 content hash in the
+filename. The Manifest and HTML point only to those hashed files. The maskable
+icon uses an opaque Navy canvas with a mark occupying about 64% of the canvas
+inside the platform safe zone. The mark represents a
 controlled relay, accepted event, and state output; it does not reference an
 identity protocol or delivery provider.
+
+The Worker marks `/console/` and `/console/manifest.webmanifest` as
+`no-cache, must-revalidate`. Hashed favicon and application files are served
+with `public, max-age=31536000, immutable`, so an installed client can update
+its metadata without retaining an old icon URL.
 
 ## Variant Intent
 
