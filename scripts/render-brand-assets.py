@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render v25 SVG brand assets into browser, Apple, and PWA raster files."""
+"""Render v25 SVG brand assets into browser and PWA raster files."""
 
 from __future__ import annotations
 
@@ -32,7 +32,6 @@ def main() -> None:
     render(favicon_dark, ASSETS / "oidrune-favicon-dark-16x16.png", 16)
     render(favicon_dark, ASSETS / "oidrune-favicon-dark-32x32.png", 32)
     render(favicon_dark, ASSETS / "oidrune-favicon-dark-48x48.png", 48)
-    render(app, ASSETS / "oidrune-app-180x180.png", 180)
     render(app, ASSETS / "oidrune-app-192x192.png", 192)
     render(app, ASSETS / "oidrune-app-512x512.png", 512)
     render(app_dark, ASSETS / "oidrune-app-a3-192x192.png", 192)

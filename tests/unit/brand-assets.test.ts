@@ -104,7 +104,6 @@ describe("Oidrune v25 brand asset contract", () => {
       ["oidrune-favicon-dark-16x16.png", 16, 16],
       ["oidrune-favicon-dark-32x32.png", 32, 32],
       ["oidrune-favicon-dark-48x48.png", 48, 48],
-      ["oidrune-app-180x180.png", 180, 180],
       ["oidrune-app-192x192.png", 192, 192],
       ["oidrune-app-512x512.png", 512, 512],
       ["oidrune-app-a3-192x192.png", 192, 192],
@@ -132,10 +131,10 @@ describe("Oidrune v25 brand asset contract", () => {
     expect(html).toContain('media="(prefers-color-scheme: light)"');
     expect(html).toContain('media="(prefers-color-scheme: dark)"');
     expect(html).toContain("brand/v25/oidrune-favicon.ico");
+    expect(html).not.toContain("apple-touch-icon");
     expect(html).toContain(
       '<link rel="icon" type="image/x-icon" sizes="any" media="(prefers-color-scheme: light)"',
     );
-    expect(html).toContain("brand/v25/oidrune-app-180x180.png");
     expect(html).toContain("manifest.webmanifest");
     expect(html).toContain('content="#121A2B"');
 

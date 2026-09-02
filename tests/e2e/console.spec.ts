@@ -1,5 +1,16 @@
 import { expect, test } from "@playwright/test";
 
+test("console uses the manifest as its only install metadata source", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+    "href",
+    /manifest\.webmanifest$/,
+  );
+  await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveCount(0);
+});
+
 test("operator can add a source through the confirmation flow", async ({
   page,
 }) => {
