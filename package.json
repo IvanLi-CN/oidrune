@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "build": "vite build",
+    "build": "vite build && python3 scripts/validate-built-brand-assets.py",
     "check": "biome check .",
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",

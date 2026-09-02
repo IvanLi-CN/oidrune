@@ -13,6 +13,7 @@ import { verifyAccessIdentity, verifyGitHubOidc } from "../infrastructure/oidc";
 import { OidruneRepository } from "../infrastructure/repository";
 import { MAX_REQUEST_BYTES } from "../shared/constants";
 import type { Env } from "./bindings";
+import { consoleAssetCacheControl } from "./cache";
 import { asProblem, HttpProblem } from "./errors";
 import { releaseReplay, reserveReplay } from "./replay-guard";
 
@@ -132,11 +133,21 @@ async function serveConsoleAssets(
 ): Promise<Response> {
   await verifyAccessIdentity(context.req.raw, context.env);
   const assetUrl = new URL(context.req.raw.url);
+  const originalPathname = assetUrl.pathname;
   assetUrl.pathname =
     assetUrl.pathname === "/console" || assetUrl.pathname === "/console/"
       ? "/"
       : assetUrl.pathname.replace(/^\/console/, "");
-  return context.env.ASSETS.fetch(new Request(assetUrl, context.req.raw));
+  const response = await context.env.ASSETS.fetch(
+    new Request(assetUrl, context.req.raw),
+  );
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", consoleAssetCacheControl(originalPathname));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 function bearerToken(request: Request): string {

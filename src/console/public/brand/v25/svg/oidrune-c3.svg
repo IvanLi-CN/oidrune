@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="336" height="336" viewBox="0 0 336 336" role="img" aria-labelledby="title">
+  <title id="title">Oidrune C3 inverse round icon</title>
+<circle cx="168" cy="168" r="168" fill="#121a2b"/>
+  <g transform="translate(168 168) scale(.76)"><path d="M72 -98 A116 116 0 1 0 72 98" fill="none" stroke="#d8f366" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+<circle r="54" fill="#d8f366"/><circle r="27" fill="#121a2b"/>
+<path d="M70 -35H132 M70 0H132 M70 35H132" fill="none" stroke="#d8f366" stroke-width="22" stroke-linecap="round"/> </g>
+</svg>
