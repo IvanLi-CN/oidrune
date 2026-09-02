@@ -25,10 +25,10 @@ pixel-derived shape in reconstructed SVG artwork.
   record the deterministic raster comparison against the reference.
 
 The runtime palette is intentionally limited to Ink Navy `#121A2B`, Signal Lime
-`#D8F366`, and Paper `#F6F7F9`. A2 is the favicon source, A3 is the regular
-application and Apple Touch source, and the maskable icon uses an opaque Navy
-canvas with a mark occupying about 64% of the canvas inside the platform safe
-zone. The mark represents a
+`#D8F366`, and Paper `#F6F7F9`. A2 is the light favicon, regular application,
+and Apple Touch source. A3 is retained as the dark/inverse application and
+favicon source. The maskable icon uses an opaque Navy canvas with a mark
+occupying about 64% of the canvas inside the platform safe zone. The mark represents a
 controlled relay, accepted event, and state output; it does not reference an
 identity protocol or delivery provider.
 
@@ -37,8 +37,8 @@ identity protocol or delivery provider.
 | Variant | Use | Intent and recommendation |
 | --- | --- | --- |
 | A1 | Round icon | Lime field with the ink relay mark. Recommended where a circular avatar or badge is required. |
-| A2 | Favicon | Lime square field with the ink relay mark. Recommended for browser tabs because the counter remains legible at 16 px. |
-| A3 | App icon | Navy rounded square with the reverse mark. Recommended for installed app surfaces and Apple Touch Icon. |
+| A2 | Favicon and app icon | Lime square field with the ink relay mark. Recommended as the primary browser, installed app, and Apple Touch visual because the counter remains legible at small sizes. |
+| A3 | Dark app/favicon variant | Navy rounded square with the reverse mark. Retained for explicit dark/inverse surfaces and the dark favicon media branch. |
 | B1 | Website lockup | Primary mark plus navy wordmark. Recommended for public-facing site navigation. |
 | B2 | Console lockup | Module mark plus navy wordmark. Recommended for operator Console branding. |
 | B3 | Inverse lockup | Navy field with lime lockup. Recommended for dark or high-contrast brand surfaces. |

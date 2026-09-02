@@ -183,10 +183,12 @@ def main() -> None:
         write(RUNTIME / "svg" / f"oidrune-{name}.svg", content)
 
     write(RUNTIME / "oidrune-favicon.svg", variants["a2"])
+    write(RUNTIME / "oidrune-favicon-dark.svg", variants["a3"])
     write(RUNTIME / "oidrune-mark-reverse.svg", SOURCE.joinpath("oidrune-mark-reverse.svg").read_text(encoding="utf-8"))
     # The Console rail is Navy, so the B2 module geometry uses its approved
     # inverse treatment while retaining the B2 lockup spacing and rhythm.
     write(RUNTIME / "oidrune-lockup-b2-on-dark.svg", svg_document(480, 140, "0 0 480 140", "Oidrune B2 inverse console lockup", lockup_body("module-reverse", inverse=True, background=INK)))
+    write(RUNTIME / "oidrune-app-a2.svg", variants["a2"])
     write(RUNTIME / "oidrune-app-a3.svg", variants["a3"])
     write(RUNTIME / "oidrune-app-maskable.svg", svg_document(512, 512, "0 0 512 512", "Oidrune maskable application icon", f'<rect width="512" height="512" fill="{INK}"/>\n  {mark_body("reverse", "translate(256 256) scale(1.25)")}'))
 

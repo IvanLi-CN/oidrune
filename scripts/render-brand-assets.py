@@ -22,14 +22,21 @@ def render(source: Path, target: Path, size: int) -> None:
 
 def main() -> None:
     favicon = ASSETS / "oidrune-favicon.svg"
-    app = ASSETS / "oidrune-app-a3.svg"
+    favicon_dark = ASSETS / "oidrune-favicon-dark.svg"
+    app = ASSETS / "oidrune-app-a2.svg"
+    app_dark = ASSETS / "oidrune-app-a3.svg"
     maskable = ASSETS / "oidrune-app-maskable.svg"
     render(favicon, ASSETS / "oidrune-favicon-16x16.png", 16)
     render(favicon, ASSETS / "oidrune-favicon-32x32.png", 32)
     render(favicon, ASSETS / "oidrune-favicon-48x48.png", 48)
+    render(favicon_dark, ASSETS / "oidrune-favicon-dark-16x16.png", 16)
+    render(favicon_dark, ASSETS / "oidrune-favicon-dark-32x32.png", 32)
+    render(favicon_dark, ASSETS / "oidrune-favicon-dark-48x48.png", 48)
     render(app, ASSETS / "oidrune-app-180x180.png", 180)
     render(app, ASSETS / "oidrune-app-192x192.png", 192)
     render(app, ASSETS / "oidrune-app-512x512.png", 512)
+    render(app_dark, ASSETS / "oidrune-app-a3-192x192.png", 192)
+    render(app_dark, ASSETS / "oidrune-app-a3-512x512.png", 512)
     render(maskable, ASSETS / "oidrune-app-maskable-192x192.png", 192)
     render(maskable, ASSETS / "oidrune-app-maskable-512x512.png", 512)
     magick = shutil.which("magick") or shutil.which("convert")
@@ -42,6 +49,16 @@ def main() -> None:
             str(ASSETS / "oidrune-favicon-32x32.png"),
             str(ASSETS / "oidrune-favicon-48x48.png"),
             str(ASSETS / "oidrune-favicon.ico"),
+        ],
+        check=True,
+    )
+    subprocess.run(
+        [
+            magick,
+            str(ASSETS / "oidrune-favicon-dark-16x16.png"),
+            str(ASSETS / "oidrune-favicon-dark-32x32.png"),
+            str(ASSETS / "oidrune-favicon-dark-48x48.png"),
+            str(ASSETS / "oidrune-favicon-dark.ico"),
         ],
         check=True,
     )

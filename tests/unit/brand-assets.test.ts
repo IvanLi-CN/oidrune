@@ -33,8 +33,10 @@ describe("Oidrune v25 brand asset contract", () => {
       join(sourceRoot, "oidrune-mark-module.svg"),
       join(sourceRoot, "oidrune-wordmark.svg"),
       join(assetRoot, "oidrune-favicon.svg"),
+      join(assetRoot, "oidrune-favicon-dark.svg"),
       join(assetRoot, "oidrune-lockup-b2-on-dark.svg"),
       join(assetRoot, "oidrune-mark-reverse.svg"),
+      join(assetRoot, "oidrune-app-a2.svg"),
       join(assetRoot, "oidrune-app-a3.svg"),
       join(assetRoot, "oidrune-app-maskable.svg"),
     ];
@@ -99,9 +101,14 @@ describe("Oidrune v25 brand asset contract", () => {
       ["oidrune-favicon-16x16.png", 16, 16],
       ["oidrune-favicon-32x32.png", 32, 32],
       ["oidrune-favicon-48x48.png", 48, 48],
+      ["oidrune-favicon-dark-16x16.png", 16, 16],
+      ["oidrune-favicon-dark-32x32.png", 32, 32],
+      ["oidrune-favicon-dark-48x48.png", 48, 48],
       ["oidrune-app-180x180.png", 180, 180],
       ["oidrune-app-192x192.png", 192, 192],
       ["oidrune-app-512x512.png", 512, 512],
+      ["oidrune-app-a3-192x192.png", 192, 192],
+      ["oidrune-app-a3-512x512.png", 512, 512],
       ["oidrune-app-maskable-192x192.png", 192, 192],
       ["oidrune-app-maskable-512x512.png", 512, 512],
     ];
@@ -121,7 +128,13 @@ describe("Oidrune v25 brand asset contract", () => {
   it("keeps the console metadata and brand boundaries explicit", async () => {
     const html = await read(join(root, "src/console/index.html"));
     expect(html).toContain("brand/v25/oidrune-favicon.svg");
+    expect(html).toContain("brand/v25/oidrune-favicon-dark.svg");
+    expect(html).toContain('media="(prefers-color-scheme: light)"');
+    expect(html).toContain('media="(prefers-color-scheme: dark)"');
     expect(html).toContain("brand/v25/oidrune-favicon.ico");
+    expect(html).toContain(
+      '<link rel="icon" type="image/x-icon" sizes="any" media="(prefers-color-scheme: light)"',
+    );
     expect(html).toContain("brand/v25/oidrune-app-180x180.png");
     expect(html).toContain("manifest.webmanifest");
     expect(html).toContain('content="#121A2B"');
@@ -131,6 +144,10 @@ describe("Oidrune v25 brand asset contract", () => {
       '<rect width="512" height="512" fill="#121a2b"/>',
     );
     expect(maskable).toContain("translate(256 256) scale(1.25)");
+    const appLight = await read(join(assetRoot, "oidrune-app-a2.svg"));
+    const appDark = await read(join(assetRoot, "oidrune-app-a3.svg"));
+    expect(appLight).toContain('fill="#d8f366"');
+    expect(appDark).toContain('fill="#121a2b"');
     const runtime = await read(join(root, "src/console/main.tsx"));
     expect(runtime).not.toMatch(
       /serviceWorker|navigator\.serviceWorker|caches\.open/,
