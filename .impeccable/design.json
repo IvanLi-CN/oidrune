@@ -184,7 +184,7 @@
       {
         "name": "mobile-console",
         "value": "760px",
-        "purpose": "Turns the rail horizontal and stacks operational content."
+        "purpose": "Turns the rail horizontal without a 320px scrollbar and stacks operational content."
       }
     ]
   },
@@ -241,7 +241,7 @@
       "name": "Data Table",
       "kind": "card",
       "refersTo": "table-surface",
-      "description": "A flat white surface for comparing normalized delivery records.",
+      "description": "A flat white surface for comparing normalized delivery records. On mobile, fixed columns keep outcome and status labels readable while a dead-letter retry control moves below its status label.",
       "html": "<div class=\"ds-table-wrap\"><table><thead><tr><th>Source</th><th>Status</th></tr></thead><tbody><tr><td><strong>release-api</strong><small>workflow.completed</small></td><td><span class=\"ds-status-pill ds-status-pill-success\">delivered</span></td></tr></tbody></table></div>",
       "css": ".ds-table-wrap { overflow-x: auto; border: 1px solid #dce1e8; background: #fff; } .ds-table-wrap table { width: 100%; border-collapse: collapse; font: 400 14px Inter, ui-sans-serif, system-ui, sans-serif; } .ds-table-wrap th { padding: 12px 16px; border-bottom: 1px solid #dce1e8; background: #fafbfd; color: #657389; font-size: 12px; font-weight: 700; text-align: left; } .ds-table-wrap td { padding: 15px 16px; border-bottom: 1px solid #e5e9ef; color: #3e4c61; } .ds-table-wrap tr:last-child td { border-bottom: 0; } .ds-table-wrap strong, .ds-table-wrap small { display: block; } .ds-table-wrap strong { color: #1d2a3d; } .ds-table-wrap small { margin-top: 4px; color: #68758b; font-size: 12px; }"
     },

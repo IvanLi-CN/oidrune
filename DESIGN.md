@@ -266,7 +266,7 @@ The desktop console is a two-column shell: a fixed 248px navigation rail and a f
 
 Content uses a 30px vertical stack rhythm. The overview metric strip is a three-column equal grid; lists and tables use full-width white surfaces with quiet rules. Forms are single-row inline tools on desktop and have a 660px maximum width where they edit a destination. Controls use a stable 44px minimum height so data entry and actions remain easy to target.
 
-At the 760px breakpoint, the rail becomes a sticky horizontal bar with the compact inverse mark, 44px icon targets, and no visible footer status. The work area uses 18px side padding, metrics stack to one column, forms stack vertically with full-width primary actions, confirmation actions stack, and tables switch to fixed mobile columns with low-priority columns hidden. Long cell values and status labels remain contained within their columns rather than overlapping adjacent data. Reduced-motion users receive no transition or refresh spin.
+At the 760px breakpoint, the rail becomes a sticky horizontal bar with the compact inverse mark, 44px icon targets, and no visible footer status. All five navigation targets fit at 320px without a horizontal scrollbar. The work area uses 18px side padding, metrics stack to one column, forms stack vertically with full-width primary actions, confirmation actions stack, and tables switch to fixed mobile columns with low-priority columns hidden. Long cell values and status labels remain contained within their columns rather than overlapping adjacent data; a dead-letter retry control moves below its status label to preserve both readable labels and its touch target. Reduced-motion users receive no transition or refresh spin.
 
 ## Elevation & Depth
 
@@ -309,10 +309,10 @@ Oidrune uses small, controlled corners rather than soft, inflated cards. Inputs 
 - **Error / Disabled:** Preserve the field geometry while using the semantic error treatment or the shared disabled opacity (`0.55`).
 
 ### Navigation
-- **Style:** The desktop rail is Night Console with a 150px B2-derived lockup. Items are 44px tall, 6px radius, and use muted blue-gray text. Hover uses `#202c43`; the active item uses `#26344f` with a 1px `#384965` border and exposes `aria-current="page"`. On mobile, the rail is sticky and labels are visually hidden but remain accessible to assistive technology.
+- **Style:** The desktop rail is Night Console with a 150px B2-derived lockup. Items are 44px tall, 6px radius, and use muted blue-gray text. Hover uses `#202c43`; the active item uses `#26344f` with a 1px `#384965` border and exposes `aria-current="page"`. On mobile, the rail is sticky and labels are visually hidden but remain accessible to assistive technology; all five icon targets fit at 320px without horizontal scrolling.
 
 ### Tables and Lists
-- **Style:** White, full-width working surfaces with 1px outer rules, 12px header padding, 15px row padding, and mono text for immutable IDs. Keep the primary value bold and the supporting line muted. On narrow viewports, cell content may wrap but must never cross a neighboring column boundary.
+- **Style:** White, full-width working surfaces with 1px outer rules, 12px header padding, 15px row padding, and mono text for immutable IDs. Keep the primary value bold and the supporting line muted. On narrow viewports, cell content may wrap but must never cross a neighboring column boundary; keep compact outcome and status labels on one readable line, and stack a dead-letter retry control beneath its status when the dedicated action column is hidden.
 
 ### Readiness Band
 - **Style:** A quiet `#fbfdf5` band with a single `#8aa84b` left marker, a 9px readiness dot, and a secondary action. This is the console's one explicit readiness callout; keep it singular.

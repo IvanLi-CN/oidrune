@@ -863,7 +863,20 @@ function EventTable({
                 </span>
               </td>
               <td>
-                <Status status={event.status} />
+                <div className="status-cell">
+                  <Status status={event.status} />
+                  {onRetry && event.status === "dead_letter" ? (
+                    <button
+                      className="row-action mobile-row-action"
+                      type="button"
+                      onClick={() => onRetry(event)}
+                      aria-label={`Retry ${event.id}`}
+                      title="Retry dead letter"
+                    >
+                      <RefreshCw aria-hidden="true" size={16} />
+                    </button>
+                  ) : null}
+                </div>
               </td>
               <td>{formatDate(event.received_at)}</td>
               {onRetry ? (

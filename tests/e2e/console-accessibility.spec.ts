@@ -145,6 +145,27 @@ test("delivery tables keep content within the mobile viewport", async ({
     );
 
   expect(tableContentOverflows).toBe(false);
+  const compactLabelsWrap = await page
+    .locator(".event-table .outcome, .event-table .status")
+    .evaluateAll((labels) =>
+      labels.some((label) => {
+        const textRange = document.createRange();
+        textRange.selectNodeContents(label);
+        return (
+          textRange.getClientRects().length > 1 ||
+          label.scrollWidth > label.clientWidth + 1
+        );
+      }),
+    );
+
+  expect(compactLabelsWrap).toBe(false);
+  await expect
+    .poll(() =>
+      page
+        .locator(".sidebar")
+        .evaluate((sidebar) => sidebar.scrollWidth <= sidebar.clientWidth),
+    )
+    .toBe(true);
   await expect
     .poll(() =>
       page.evaluate(
