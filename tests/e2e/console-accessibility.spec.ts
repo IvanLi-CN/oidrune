@@ -57,7 +57,9 @@ test("console exposes the active section and opens the delivery queue directly",
 
   await page.getByRole("button", { name: "View queue" }).click();
 
-  await expect(page.getByRole("heading", { name: "Delivery" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Delivery", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Delivery" })).toHaveAttribute(
     "aria-current",
     "page",
@@ -109,6 +111,8 @@ test("compact console text meets the AA contrast floor", async ({ page }) => {
       ".table-wrap",
     ),
   ).resolves.toBeGreaterThanOrEqual(4.5);
+
+  await page.getByRole("button", { name: "Sources" }).click();
   await expect(
     contrastRatio(
       page,
