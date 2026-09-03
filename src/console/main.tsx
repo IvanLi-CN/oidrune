@@ -1,9 +1,9 @@
 import {
+  ArrowRight,
   Bell,
   ChevronRight,
   CircleCheck,
   CloudCog,
-  ExternalLink,
   History,
   KeyRound,
   Plus,
@@ -14,7 +14,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   type AdminConfig,
@@ -97,6 +97,19 @@ function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [section, setSection] = useState<Section>("Overview");
   const [confirmation, setConfirmation] = useState<Confirmation>(null);
+  const confirmationTriggerRef = useRef<HTMLElement | null>(null);
+  const backgroundInert = confirmation !== null;
+
+  const closeConfirmation = useCallback(() => {
+    setConfirmation(null);
+  }, []);
+
+  const openConfirmation = (value: Confirmation) => {
+    const activeElement = document.activeElement;
+    confirmationTriggerRef.current =
+      activeElement instanceof HTMLElement ? activeElement : null;
+    setConfirmation(value);
+  };
 
   const refresh = useCallback(async () => {
     if (__OIDRUNE_DEMO__) {
@@ -155,112 +168,124 @@ function App() {
 
   return (
     <div className="app-shell">
-      <a className="skip-link" href="#main-content">
-        Skip to console content
-      </a>
-      <aside className="sidebar" aria-label="Console navigation">
-        <div className="brand">
-          <img className="brand-lockup" src={brandLockupSrc} alt="Oidrune" />
-          <img
-            className="brand-mark-compact"
-            src={brandMarkSrc}
-            alt=""
-            aria-hidden="true"
-          />
-        </div>
-        <nav className="nav-list">
-          {navigation.map(({ label, icon: Icon }) => (
-            <button
-              className={section === label ? "nav-item selected" : "nav-item"}
-              key={label}
-              onClick={() => setSection(label)}
-              type="button"
-            >
-              <Icon aria-hidden="true" size={18} />
-              <span>{label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-footer">
-          <span className="presence" aria-hidden="true" />
-          Access protected
-        </div>
-      </aside>
-      <main id="main-content" className="main-content">
-        <header className="topbar">
-          <div>
-            <p className="breadcrumb">
-              Operator console <ChevronRight aria-hidden="true" size={14} />{" "}
-              {section}
-            </p>
-            <h1>{section}</h1>
-          </div>
-          <button
-            className="icon-button"
-            type="button"
-            aria-label="Refresh console data"
-            onClick={() => void refresh()}
-            disabled={state.loading}
-            title="Refresh data"
-          >
-            <RefreshCw
+      <div
+        className="console-shell"
+        aria-hidden={backgroundInert}
+        inert={backgroundInert}
+      >
+        <a className="skip-link" href="#main-content">
+          Skip to console content
+        </a>
+        <aside className="sidebar" aria-label="Console navigation">
+          <div className="brand">
+            <img className="brand-lockup" src={brandLockupSrc} alt="Oidrune" />
+            <img
+              className="brand-mark-compact"
+              src={brandMarkSrc}
+              alt=""
               aria-hidden="true"
-              size={18}
-              className={state.loading ? "spin" : ""}
             />
-          </button>
-        </header>
-        {state.notice ? (
-          <div className={`notice ${state.notice.tone}`} role="status">
-            <span>{state.notice.text}</span>
-            <button
-              aria-label="Dismiss notification"
-              type="button"
-              onClick={() => dispatch({ type: "notice", notice: null })}
-            >
-              <X aria-hidden="true" size={16} />
-            </button>
           </div>
-        ) : null}
-        {section === "Overview" ? (
-          <Overview state={state} onConfirm={setConfirmation} />
-        ) : null}
-        {section === "Sources" ? (
-          <Sources
-            config={state.config}
-            onConfig={changeConfig}
-            onConfirm={setConfirmation}
-          />
-        ) : null}
-        {section === "Destination" ? (
-          <Destination
-            config={state.config}
-            onConfig={changeConfig}
-            onConfirm={setConfirmation}
-          />
-        ) : null}
-        {section === "Releases" ? (
-          <Releases
-            config={state.config}
-            onConfig={changeConfig}
-            onConfirm={setConfirmation}
-          />
-        ) : null}
-        {section === "Delivery" ? (
-          <Delivery
-            events={state.events}
-            audit={state.audit}
-            onEvents={changeEvents}
-            onConfirm={setConfirmation}
-          />
-        ) : null}
-      </main>
+          <nav className="nav-list">
+            {navigation.map(({ label, icon: Icon }) => (
+              <button
+                className={section === label ? "nav-item selected" : "nav-item"}
+                key={label}
+                onClick={() => setSection(label)}
+                aria-current={section === label ? "page" : undefined}
+                type="button"
+              >
+                <Icon aria-hidden="true" size={18} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="sidebar-footer">
+            <span className="presence" aria-hidden="true" />
+            Access protected
+          </div>
+        </aside>
+        <main id="main-content" className="main-content">
+          <header className="topbar">
+            <div>
+              <p className="breadcrumb">
+                Operator console <ChevronRight aria-hidden="true" size={14} />{" "}
+                {section}
+              </p>
+              <h1>{section}</h1>
+            </div>
+            <button
+              className="icon-button"
+              type="button"
+              aria-label="Refresh console data"
+              onClick={() => void refresh()}
+              disabled={state.loading}
+              title="Refresh data"
+            >
+              <RefreshCw
+                aria-hidden="true"
+                size={18}
+                className={state.loading ? "spin" : ""}
+              />
+            </button>
+          </header>
+          {state.notice ? (
+            <div className={`notice ${state.notice.tone}`} role="status">
+              <span>{state.notice.text}</span>
+              <button
+                aria-label="Dismiss notification"
+                type="button"
+                onClick={() => dispatch({ type: "notice", notice: null })}
+              >
+                <X aria-hidden="true" size={16} />
+              </button>
+            </div>
+          ) : null}
+          {section === "Overview" ? (
+            <Overview
+              state={state}
+              onConfirm={openConfirmation}
+              onNavigate={setSection}
+            />
+          ) : null}
+          {section === "Sources" ? (
+            <Sources
+              config={state.config}
+              onConfig={changeConfig}
+              onConfirm={openConfirmation}
+            />
+          ) : null}
+          {section === "Destination" ? (
+            <Destination
+              config={state.config}
+              onConfig={changeConfig}
+              onConfirm={openConfirmation}
+            />
+          ) : null}
+          {section === "Releases" ? (
+            <Releases
+              config={state.config}
+              onConfig={changeConfig}
+              onConfirm={openConfirmation}
+            />
+          ) : null}
+          {section === "Delivery" ? (
+            <Delivery
+              events={state.events}
+              audit={state.audit}
+              onEvents={changeEvents}
+              onConfirm={openConfirmation}
+            />
+          ) : null}
+        </main>
+      </div>
       {confirmation ? (
         <ConfirmationDialog
           title={confirmation.title}
           detail={confirmation.detail}
-          onCancel={() => setConfirmation(null)}
+          onCancel={closeConfirmation}
           onConfirm={() => void runConfirmed()}
+          returnFocusTo={confirmationTriggerRef.current}
         />
       ) : null}
     </div>
@@ -270,9 +295,11 @@ function App() {
 function Overview({
   state,
   onConfirm,
+  onNavigate,
 }: {
   state: ConsoleState;
   onConfirm: (value: Confirmation) => void;
+  onNavigate: (value: Section) => void;
 }) {
   const delivered = state.events.filter(
     (event) => event.status === "delivered",
@@ -344,16 +371,9 @@ function Overview({
           <button
             className="text-button"
             type="button"
-            onClick={() =>
-              onConfirm({
-                title: "Open delivery queue",
-                detail:
-                  "Use the Delivery navigation item to inspect and retry dead letters.",
-                action: async () => undefined,
-              })
-            }
+            onClick={() => onNavigate("Delivery")}
           >
-            View queue <ExternalLink aria-hidden="true" size={15} />
+            View queue <ArrowRight aria-hidden="true" size={15} />
           </button>
         </div>
         <EventTable events={state.events.slice(0, 5)} />
@@ -843,7 +863,20 @@ function EventTable({
                 </span>
               </td>
               <td>
-                <Status status={event.status} />
+                <div className="status-cell">
+                  <Status status={event.status} />
+                  {onRetry && event.status === "dead_letter" ? (
+                    <button
+                      className="row-action mobile-row-action"
+                      type="button"
+                      onClick={() => onRetry(event)}
+                      aria-label={`Retry ${event.id}`}
+                      title="Retry dead letter"
+                    >
+                      <RefreshCw aria-hidden="true" size={16} />
+                    </button>
+                  ) : null}
+                </div>
               </td>
               <td>{formatDate(event.received_at)}</td>
               {onRetry ? (
@@ -878,12 +911,60 @@ function ConfirmationDialog({
   detail,
   onCancel,
   onConfirm,
+  returnFocusTo,
 }: {
   title: string;
   detail: string;
   onCancel: () => void;
   onConfirm: () => void;
+  returnFocusTo: HTMLElement | null;
 }) {
+  const dialogRef = useRef<HTMLElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    cancelButtonRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCancel();
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+      const first = focusable[0];
+      const last = focusable.at(-1);
+
+      if (!first || !last) {
+        event.preventDefault();
+        return;
+      }
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      returnFocusTo?.focus();
+    };
+  }, [onCancel, returnFocusTo]);
+
   return (
     <div className="dialog-backdrop" role="presentation">
       <section
@@ -891,14 +972,21 @@ function ConfirmationDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirmation-title"
+        aria-describedby="confirmation-detail"
+        ref={dialogRef}
       >
         <div className="dialog-icon">
           <Bell aria-hidden="true" size={20} />
         </div>
         <h2 id="confirmation-title">{title}</h2>
-        <p>{detail}</p>
+        <p id="confirmation-detail">{detail}</p>
         <div className="dialog-actions">
-          <button className="secondary-button" type="button" onClick={onCancel}>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={onCancel}
+            ref={cancelButtonRef}
+          >
             Cancel
           </button>
           <button className="primary-button" type="button" onClick={onConfirm}>

@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-03T07:33:29Z",
+  "title": "Design System: Oidrune",
+  "extensions": {
+    "colorMeta": {
+      "night-console": {
+        "role": "neutral",
+        "displayName": "Night Console",
+        "canonical": "#121a2b",
+        "tonalRamp": ["#03050a", "#070b12", "#0c111d", "#121a2b", "#24324a", "#51627d", "#a6b4c9", "#eef3f9"]
+      },
+      "oidrune-lime": {
+        "role": "secondary",
+        "displayName": "Oidrune Lime",
+        "canonical": "#d8f366",
+        "tonalRamp": ["#263000", "#586c00", "#879f00", "#b4d340", "#d8f366", "#e5fa8d", "#effcaf", "#f8ffdc"]
+      },
+      "operator-paper": {
+        "role": "neutral",
+        "displayName": "Operator Paper",
+        "canonical": "#f6f7f9",
+        "tonalRamp": ["#171a1f", "#343941", "#59616d", "#8b94a0", "#b8bec7", "#d6dae0", "#e9ebee", "#f6f7f9"]
+      },
+      "surface-white": {
+        "role": "neutral",
+        "displayName": "Surface White",
+        "canonical": "#fff",
+        "tonalRamp": ["#171717", "#383838", "#5c5c5c", "#828282", "#a9a9a9", "#c9c9c9", "#e7e7e7", "#fff"]
+      },
+      "relay-blue": {
+        "role": "primary",
+        "displayName": "Relay Blue",
+        "canonical": "#175bcc",
+        "tonalRamp": ["#061b46", "#092f78", "#0d439e", "#175bcc", "#4b83e5", "#8eb2f2", "#c8dafb", "#eef4ff"]
+      },
+      "relay-blue-deep": {
+        "role": "primary",
+        "displayName": "Relay Blue Deep",
+        "canonical": "#124ba9",
+        "tonalRamp": ["#041631", "#072b61", "#0b3e8b", "#124ba9", "#427ad2", "#81a8eb", "#c1d4f7", "#edf3ff"]
+      },
+      "focus-blue": {
+        "role": "primary",
+        "displayName": "Relay Focus Blue",
+        "canonical": "#1769e0",
+        "tonalRamp": ["#061b45", "#0a2f75", "#0e459f", "#1769e0", "#4a8ceb", "#91baf7", "#c9ddfd", "#eff6ff"]
+      },
+      "success": {
+        "role": "success",
+        "displayName": "Delivery Success",
+        "canonical": "#176c3c",
+        "tonalRamp": ["#062c18", "#0b4d2c", "#0f6339", "#176c3c", "#4d9f72", "#8bc7a3", "#c4e6d1", "#eefaf3"]
+      },
+      "error": {
+        "role": "error",
+        "displayName": "Delivery Error",
+        "canonical": "#ad2f29",
+        "tonalRamp": ["#3a0b08", "#68150f", "#8e211a", "#ad2f29", "#cf6862", "#e49d98", "#f3cfcc", "#fff1f0"]
+      },
+      "text-destructive": {
+        "role": "error",
+        "displayName": "Destructive Action",
+        "canonical": "#b42318",
+        "tonalRamp": ["#3d0906", "#6c120d", "#941c15", "#b42318", "#d65e57", "#e99791", "#f5c9c5", "#fff0ef"]
+      },
+      "warning": {
+        "role": "warning",
+        "displayName": "Delivery Warning",
+        "canonical": "#9a5a05",
+        "tonalRamp": ["#3b2200", "#674000", "#815700", "#9a5a05", "#c58a35", "#ddb676", "#f0ddba", "#fff7e8"]
+      },
+      "info": {
+        "role": "tertiary",
+        "displayName": "Delivery Information",
+        "canonical": "#34507c",
+        "tonalRamp": ["#0d1f3c", "#1a3761", "#294775", "#34507c", "#6b83a8", "#a2b4cf", "#d0daea", "#f2f6fc"]
+      },
+      "readiness-ready": {
+        "role": "success",
+        "displayName": "Readiness Green",
+        "canonical": "#5d9130",
+        "tonalRamp": ["#152900", "#2d4d0d", "#466e1e", "#5d9130", "#8fbd67", "#b7d99a", "#d9edc8", "#f2faeb"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Metric Display",
+        "purpose": "Large delivery counts and health summaries."
+      },
+      "headline": {
+        "displayName": "Console Headline",
+        "purpose": "The active operator console section."
+      },
+      "title": {
+        "displayName": "Section Title",
+        "purpose": "Intro and high-value operational headings."
+      },
+      "body": {
+        "displayName": "Operator Body",
+        "purpose": "Descriptions, table content, and explanations."
+      },
+      "compact": {
+        "displayName": "Compact Supporting Text",
+        "purpose": "Table headers, secondary row data, and compact status text."
+      },
+      "label": {
+        "displayName": "Control Label",
+        "purpose": "Field labels, table headers, counts, and buttons."
+      },
+      "readiness": {
+        "displayName": "Readiness Statement",
+        "purpose": "The active gateway-policy statement."
+      },
+      "section": {
+        "displayName": "Section Heading",
+        "purpose": "Repeating section and destination headings."
+      },
+      "dialog-title": {
+        "displayName": "Dialog Title",
+        "purpose": "Protected confirmation titles."
+      },
+      "headline-mobile": {
+        "displayName": "Mobile Console Headline",
+        "purpose": "The compact active-section heading at the mobile breakpoint."
+      },
+      "code": {
+        "displayName": "Identifier Mono",
+        "purpose": "Immutable IDs, SHAs, and masked destination identifiers."
+      }
+    },
+    "roundedMeta": {
+      "input": {
+        "canonical": "5px",
+        "role": "field"
+      },
+      "control": {
+        "canonical": "6px",
+        "role": "control"
+      },
+      "dialog": {
+        "canonical": "8px",
+        "role": "protected surface"
+      },
+      "pill": {
+        "canonical": "999px",
+        "role": "status marker"
+      },
+      "circle": {
+        "canonical": "50%",
+        "role": "presence indicator"
+      }
+    },
+    "shadows": [
+      {
+        "name": "dialog-lift",
+        "value": "0 22px 65px rgb(16 24 40 / 0.28)",
+        "purpose": "Separates the protected confirmation dialog from the scrim."
+      },
+      {
+        "name": "presence-ring",
+        "value": "0 0 0 3px #294331",
+        "purpose": "Signals the access-protected presence dot; never used for containers."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "0.16s ease",
+        "purpose": "Nav, button, icon, and row-action state changes."
+      },
+      {
+        "name": "refresh-spin",
+        "value": "0.8s linear",
+        "purpose": "Refresh icon while console data is loading."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "Removes transitions and the refresh animation when requested."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile-console",
+        "value": "760px",
+        "purpose": "Turns the rail horizontal without a 320px scrollbar and stacks operational content."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The committed action for changes that require operator confirmation.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Confirm update</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 15px; border: 1px solid #175bcc; border-radius: 6px; background: #175bcc; color: #fff; font: 650 14px Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background 0.16s ease, transform 0.16s ease; } .ds-btn-primary:hover { background: #124ba9; } .ds-btn-primary:focus-visible { outline: 3px solid #1769e0; outline-offset: 2px; } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A lower-emphasis action on a white working surface.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Send test</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 15px; border: 1px solid #c8d0dc; border-radius: 6px; background: #fff; color: #26354b; font: 650 14px Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background 0.16s ease, transform 0.16s ease; } .ds-btn-secondary:hover { background: #f2f5f8; } .ds-btn-secondary:focus-visible { outline: 3px solid #1769e0; outline-offset: 2px; } .ds-btn-secondary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Text Action",
+      "kind": "button",
+      "refersTo": "text-action",
+      "description": "A quiet inline action for moving between related console views.",
+      "html": "<button class=\"ds-text-action\" type=\"button\">View queue <span aria-hidden=\"true\">&rarr;</span></button>",
+      "css": ".ds-text-action { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0; border: 0; background: transparent; color: #175bcc; font: 650 14px Inter, ui-sans-serif, system-ui, sans-serif; cursor: pointer; } .ds-text-action:hover { color: #124ba9; } .ds-text-action:focus-visible { outline: 3px solid #1769e0; outline-offset: 2px; }"
+    },
+    {
+      "name": "Identifier Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A labeled field for an immutable GitHub or destination identifier.",
+      "html": "<label class=\"ds-field\"><span>GitHub numeric ID</span><input class=\"ds-input\" placeholder=\"e.g. 583231\" /></label>",
+      "css": ".ds-field { display: grid; gap: 7px; color: #42516a; font: 650 13px Inter, ui-sans-serif, system-ui, sans-serif; } .ds-input { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid #c9d1dd; border-radius: 5px; background: #fff; color: #17243a; font: 400 14px Inter, ui-sans-serif, system-ui, sans-serif; } .ds-input::placeholder { color: #667085; } .ds-input:focus-visible { outline: 3px solid #1769e0; outline-offset: 2px; }"
+    },
+    {
+      "name": "Console Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "The active item in the dark operator navigation rail.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Console navigation\"><button class=\"ds-nav-item ds-nav-item-active\" type=\"button\" aria-current=\"page\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\"/></svg><span>Overview</span></button></nav>",
+      "css": ".ds-nav { display: grid; gap: 5px; width: 220px; padding: 16px; background: #121a2b; } .ds-nav-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; padding: 0 11px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #9cadc8; font: 400 14px Inter, ui-sans-serif, system-ui, sans-serif; text-align: left; cursor: pointer; transition: background 0.16s ease, color 0.16s ease; } .ds-nav-item svg { width: 18px; height: 18px; flex: 0 0 auto; } .ds-nav-item:hover { background: #202c43; color: #f7faff; } .ds-nav-item-active { border-color: #384965; background: #26344f; color: #fff; } .ds-nav-item:focus-visible { outline: 3px solid #1769e0; outline-offset: 2px; }"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill",
+      "description": "A compact, text-bearing delivery state marker.",
+      "html": "<span class=\"ds-status-pill ds-status-pill-success\">delivered</span>",
+      "css": ".ds-status-pill { display: inline-flex; width: fit-content; padding: 4px 8px; border-radius: 999px; font: 650 12px Inter, ui-sans-serif, system-ui, sans-serif; text-transform: capitalize; } .ds-status-pill-success { background: #e7f8ee; color: #176c3c; } .ds-status-pill-success:hover { filter: brightness(0.98); }"
+    },
+    {
+      "name": "Data Table",
+      "kind": "card",
+      "refersTo": "table-surface",
+      "description": "A flat white surface for comparing normalized delivery records. On mobile, fixed columns keep outcome and status labels readable while a dead-letter retry control moves below its status label.",
+      "html": "<div class=\"ds-table-wrap\"><table><thead><tr><th>Source</th><th>Status</th></tr></thead><tbody><tr><td><strong>release-api</strong><small>workflow.completed</small></td><td><span class=\"ds-status-pill ds-status-pill-success\">delivered</span></td></tr></tbody></table></div>",
+      "css": ".ds-table-wrap { overflow-x: auto; border: 1px solid #dce1e8; background: #fff; } .ds-table-wrap table { width: 100%; border-collapse: collapse; font: 400 14px Inter, ui-sans-serif, system-ui, sans-serif; } .ds-table-wrap th { padding: 12px 16px; border-bottom: 1px solid #dce1e8; background: #fafbfd; color: #657389; font-size: 12px; font-weight: 700; text-align: left; } .ds-table-wrap td { padding: 15px 16px; border-bottom: 1px solid #e5e9ef; color: #3e4c61; } .ds-table-wrap tr:last-child td { border-bottom: 0; } .ds-table-wrap strong, .ds-table-wrap small { display: block; } .ds-table-wrap strong { color: #1d2a3d; } .ds-table-wrap small { margin-top: 4px; color: #68758b; font-size: 12px; }"
+    },
+    {
+      "name": "Readiness Band",
+      "kind": "custom",
+      "refersTo": "readiness-band",
+      "description": "The singular readiness callout for the active gateway policy.",
+      "html": "<section class=\"ds-readiness\"><div class=\"ds-readiness-copy\"><span class=\"ds-readiness-dot\" aria-hidden=\"true\"></span><strong>Gateway policy is active</strong><p>OIDC admission and asynchronous delivery are independently enforced.</p></div><button class=\"ds-btn-secondary\" type=\"button\">Send test</button></section>",
+      "css": ".ds-readiness { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 20px 22px; border: 1px solid #cfdbb4; border-left: 4px solid #8aa84b; background: #fbfdf5; } .ds-readiness-copy { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; } .ds-readiness-copy strong { color: #162033; font: 700 15px Inter, ui-sans-serif, system-ui, sans-serif; } .ds-readiness-copy p { grid-column: 2; margin: 5px 0 0; color: #596a42; font: 400 14px/1.55 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-readiness-dot { width: 9px; height: 9px; border-radius: 50%; background: #5d9130; }"
+    },
+    {
+      "name": "Confirmation Dialog",
+      "kind": "custom",
+      "refersTo": "dialog",
+      "description": "A protected confirmation surface for irreversible or externally visible changes.",
+      "html": "<div class=\"ds-dialog-backdrop\"><section class=\"ds-dialog\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"ds-dialog-title\" aria-describedby=\"ds-dialog-detail\"><div class=\"ds-dialog-icon\" aria-hidden=\"true\">!</div><h2 id=\"ds-dialog-title\">Trust workflow release</h2><p id=\"ds-dialog-detail\">This full SHA will be eligible to submit notifications once its workflow ref also matches.</p><div class=\"ds-dialog-actions\"><button class=\"ds-btn-secondary\" type=\"button\">Cancel</button><button class=\"ds-btn-primary\" type=\"button\">Confirm</button></div></section></div>",
+      "css": ".ds-dialog-backdrop { position: fixed; inset: 0; display: grid; place-items: center; padding: 20px; background: rgb(16 24 40 / 0.44); } .ds-dialog { width: min(100%, 460px); padding: 28px; border-radius: 8px; background: #fff; box-shadow: 0 22px 65px rgb(16 24 40 / 0.28); color: #162033; } .ds-dialog-icon { display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 18px; border-radius: 6px; background: #fff1ca; color: #815700; font: 700 20px Inter, ui-sans-serif, system-ui, sans-serif; } .ds-dialog h2 { margin: 0 0 10px; font: 700 20px Inter, ui-sans-serif, system-ui, sans-serif; } .ds-dialog p { margin: 0; color: #536278; font: 400 14px/1.55 Inter, ui-sans-serif, system-ui, sans-serif; } .ds-dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 26px; } .ds-dialog button:focus-visible { outline: 3px solid #1769e0; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Trusted Control Room",
+    "overview": "Oidrune's operator console should feel like a quiet control room for a security-sensitive relay: precise, legible, and ready to explain what happened. The interface gives operational facts the first read, keeps the brand signal deliberate, and uses structure rather than decoration to establish confidence.\n\nThe dark navigation rail is the stable outer shell. The work area is a cool paper surface with white working surfaces, restrained borders, and a single reliable action blue. Signal Lime belongs to the Oidrune identity and to carefully chosen readiness moments; it is not a general-purpose fill. The result is a compact operational tool that stays calm when delivery needs attention.",
+    "keyCharacteristics": [
+      "A dark, anchored navigation shell with a light operator work area.",
+      "Dense but breathable information blocks built for scanning and comparison.",
+      "Semantic color cues paired with explicit words and accessible focus states.",
+      "Flat surfaces by default, with elevation reserved for protected confirmation."
+    ],
+    "rules": [
+      {
+        "name": "The Signal-Then-Label Rule",
+        "body": "Status colors can cue success, failure, warning, or acceptance, but a word label always carries the meaning.",
+        "section": "colors"
+      },
+      {
+        "name": "The Rare Accent Rule",
+        "body": "Keep Oidrune Lime for brand marks and deliberate readiness signals; do not wash ordinary controls or whole sections in lime.",
+        "section": "colors"
+      },
+      {
+        "name": "The Data-Has-A-Voice Rule",
+        "body": "Use the mono face for code, immutable identifiers, and measurements only; keep prose in Inter.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Surfaces are flat at rest; elevation appears only where a protected confirmation needs clear focus.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use the approved B2 console lockup on dark navigation surfaces and the compact inverse mark at the mobile breakpoint.",
+      "Do keep Relay Blue for actions and Oidrune Lime for identity or deliberate readiness signals.",
+      "Do pair every semantic color cue with an explicit text label and a visible keyboard focus state.",
+      "Do keep compact text and placeholders at a 4.5:1 minimum contrast ratio against their assigned surface.",
+      "Do reserve mono typography for immutable IDs, SHAs, and other exact data.",
+      "Do preserve flat working surfaces and use borders or tonal layering for ordinary hierarchy."
+    ],
+    "donts": [
+      "Don't introduce gradients, decorative blobs, or broad glow effects into the operator console.",
+      "Don't use lime as a generic button, panel, or page background.",
+      "Don't use status color without the corresponding written outcome or status.",
+      "Don't replace the documented small-radius language with oversized soft cards or gratuitous pills.",
+      "Don't use a shadow to solve hierarchy that a 1px rule or tonal surface can express.",
+      "Don't use a confirmation dialog for simple navigation or a task that has no protected side effect."
+    ]
+  }
+}

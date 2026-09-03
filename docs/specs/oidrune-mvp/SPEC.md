@@ -3,7 +3,7 @@
 > 当前有效规范以本文为准；实现覆盖见 `./IMPLEMENTATION.md`，主题局部背景见
 > `./HISTORY.md`，持久取舍见关联 ADR。
 
-## 背景 / 问题陈述
+## Context and Scope
 
 GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库复制 Bot
 凭据与目标配置。Oidrune 必须提供一个公开但可独立验证的入口，让调用仓库
@@ -50,9 +50,9 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - [Portable Gateway Selection](../../adr/0006-portable-gateway-selection.md)
 - [GitHub-Only Operator Identity Through Cloudflare Access](../../adr/0007-github-only-operator-identity.md)
 
-## 需求（Requirements）
+## Requirements
 
-- Each deployment MUST expose an HTTPS Public Protocol Endpoint.
+- REQ-INGRESS: Each deployment MUST expose an HTTPS Public Protocol Endpoint.
   `/v1/events/workflow-completed` remains publicly reachable for GitHub OIDC,
   while `/console*` and `/api/admin*` are protected by path-level Cloudflare
   Access. The Default Gateway uses an operator-configured Custom Domain with
@@ -61,7 +61,7 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 
 ### MUST
 
-- Public ingress MUST accept only `POST /v1/events/workflow-completed` with a
+- REQ-ADMISSION: Public ingress MUST accept only `POST /v1/events/workflow-completed` with a
   GitHub OIDC JWT in `Authorization: Bearer`.
 - Public ingress MUST validate the OIDC token before consuming the request body.
   It MUST enforce the 8 KiB body limit while streaming whenever `Content-Length`
@@ -76,7 +76,7 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - Only `github-hosted` runs may be accepted. Accepted events are `push`,
   `workflow_dispatch`, `schedule`, `release`, and guarded `pull_request`.
   `pull_request_target` and `workflow_run` are denied.
-- The trusted reusable workflow MUST suppress `pull_request` notification
+- REQ-WORKFLOW: The trusted reusable workflow MUST suppress `pull_request` notification
   unless its head repository equals the base repository. It MUST not check out
   or execute pull-request code for the notification step.
 - A trusted reusable workflow reference MUST use the exact
@@ -90,7 +90,7 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   `OIDRUNE_OIDC_AUDIENCE`); otherwise the Default Gateway is used. The selected
   endpoint MUST use HTTPS, have the exact `/v1/events/workflow-completed` path,
   and contain no credentials, query parameters, or fragment.
-- The Worker MUST create a normalized event record and enqueue it before
+- REQ-DELIVERY: The Worker MUST create a normalized event record and enqueue it before
   responding `202 Accepted`. It MUST never use GitHub credentials or APIs to
   roll back, cancel, or mutate a caller release.
 - Telegram delivery MUST use one operator-controlled destination and retry
@@ -102,7 +102,7 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - The caller-facing default for a failed handoff is warning after bounded
   client retry. A caller may choose `on_gateway_failure: fail`; that choice
   affects only its notification job, not a completed release operation.
-- All console and `/api/admin/*` operations MUST require a valid Cloudflare
+- REQ-CONSOLE: All console and `/api/admin/*` operations MUST require a valid Cloudflare
   Access identity authenticated only through the GitHub identity provider and
   admitted by an explicit deployment-private Operator allow policy. Other
   interactive login methods, including Cloudflare identity and one-time PIN,
@@ -113,16 +113,16 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   session, and MUST NOT store or use a GitHub access token. The Bot Token MUST
   remain a Worker Secret and MUST never be read from D1 or returned to a
   browser.
-- GitHub Operator identities, OAuth application values, Access identity-provider
+- REQ-PRIVACY: GitHub Operator identities, OAuth application values, Access identity-provider
   details, Access audience and team domain, and deployed policy values MUST NOT
   be committed to the repository. Tests and documentation MAY use only clearly
   fictitious placeholders.
-- Successful events MUST be retained for 30 days; failed and DLQ events for 90
+- REQ-RETENTION: Successful events MUST be retained for 30 days; failed and DLQ events for 90
   days. OIDC JWTs, Bot Tokens, and raw request bodies MUST NOT be persisted.
 
 ### SHOULD
 
-- The console SHOULD mask destination identifiers, expose fixed-format tests,
+- REQ-FAILURE: The console SHOULD mask destination identifiers, expose fixed-format tests,
   and require confirmation for retry, revocation, and destination mutation.
 - The workflow-completion Telegram body MUST be the normalized caller-provided
   `summary`, capped at 1,000 characters before persistence. Oidrune MUST NOT
@@ -190,32 +190,38 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 
 - [HTTP and reusable workflow contract](./contracts/http.md)
 
-## 验收标准
+## Verification
 
-- Given an approved owner or repository and Trusted Workflow Release, when a
+- VER-INGRESS covers: REQ-INGRESS REQ-ADMISSION
+  Given an approved owner or repository and Trusted Workflow Release, when a
   GitHub-hosted workflow presents a valid OIDC token, then Oidrune returns
   `202` only after storing and queueing one normalized event.
 - Given a token from an unapproved owner/repository, an untrusted workflow
   SHA, a forbidden event, a self-hosted runner, or a used `jti`, when it calls
   ingress, then Oidrune rejects it without a queue or Telegram side effect.
-- Given a same-repository pull request, when the shared workflow runs, then it
+- VER-WORKFLOW covers: REQ-WORKFLOW
+  Given a same-repository pull request, when the shared workflow runs, then it
   may notify; given a fork pull request, it creates no OIDC handoff.
-- Given a complete explicit gateway pair, a complete caller Variables pair, or
+- VER-DELIVERY covers: REQ-DELIVERY REQ-RETENTION
+  Given a complete explicit gateway pair, a complete caller Variables pair, or
   no override, when the shared workflow runs, then it selects the pair in that
   precedence order and requests OIDC only after validating the HTTPS endpoint.
-- Given Telegram delivery failure after handoff, when retries exhaust, then the
+- VER-FAILURE covers: REQ-FAILURE
+  Given Telegram delivery failure after handoff, when retries exhaust, then the
   event is visible as a Dead Letter while the original release remains intact.
 - Given a caller-provided `summary`, when delivery succeeds, then the Telegram
   body equals the normalized caller body and contains no Oidrune-added event
   metadata.
-- Given an explicitly approved GitHub Operator, when they authenticate through
+- VER-CONSOLE covers: REQ-CONSOLE REQ-PRIVACY
+  Given an explicitly approved GitHub Operator, when they authenticate through
   Access and open the console, then they can manage only the defined operations.
   A GitHub identity outside the deployment-private allow policy and every
   non-GitHub login method are denied; the API rejects a missing or invalid
   Access identity, including an invalid issuer, audience, signature, validity
   window, or required `sub` claim. Mutating operations record that `sub` as the
   audit actor even when an `email` claim is present.
-- Given a GitHub-only Operator authentication change or failure, the public
+- VER-PRIVACY covers: REQ-PRIVACY
+  Given a GitHub-only Operator authentication change or failure, the public
   GitHub Actions OIDC ingress remains reachable and independently authenticated.
 
 ## 非功能性验收 / 质量门槛
@@ -251,15 +257,13 @@ The deterministic `ui_demo` uses mock data only and does not contact Cloudflare,
 Access, D1, Queues, or Telegram. Storybook is not applicable to this page-level
 console surface.
 
-- [Desktop Delivery and audit trail](./assets/console-delivery-desktop.png)
+- [Desktop Delivery and audit trail at 1440x960 CSS px](./assets/console-delivery-desktop.png)
 - [Mobile Delivery and audit trail at 393x852 CSS px](./assets/console-delivery-mobile.png)
 
 This MVP adds the console surface, so `main` has no same-path visual baseline.
-The owner confirmed the current desktop and mobile renders.
-
-## Related PRs
-
-- None
+The accepted captures show the active Delivery navigation, readable compact
+states, and the contained mobile retry action. The owner reviewed and
+confirmed the desktop and mobile renders.
 
 ## 风险 / 开放问题 / 假设
 
