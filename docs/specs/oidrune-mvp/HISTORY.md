@@ -26,3 +26,9 @@
 
 - `./SPEC.md`
 - `./IMPLEMENTATION.md`
+
+## Delivery References
+
+- Pull request [#17](https://github.com/IvanLi-CN/oidrune/pull/17) delivers the
+  console accessibility, mobile layout, design-token, and visual-evidence
+  updates covered by this topic.
