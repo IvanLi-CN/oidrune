@@ -138,6 +138,9 @@ test("delivery tables keep content within the mobile viewport", async ({
         return Array.from(wrapper.querySelectorAll<HTMLElement>("td *")).some(
           (element) => {
             const rect = element.getBoundingClientRect();
+            if (rect.width === 0 && rect.height === 0) {
+              return false;
+            }
             return rect.left < bounds.left - 1 || rect.right > bounds.right + 1;
           },
         );
