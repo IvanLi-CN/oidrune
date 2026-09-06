@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   notify:
-    uses: IvanLi-CN/oidrune/.github/workflows/notify.yml@911fca0a455f4bbef4b316d21eb7001eedcdc651
+    uses: IvanLi-CN/oidrune/.github/workflows/notify.yml@8667553506eef516af0499a77273f2938387dd37
     with:
       outcome: success
       on_gateway_failure: fail
@@ -34,7 +34,7 @@ jobs:
     permissions:
       contents: none
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
       - name: Install smoke verification dependencies
         run: bun install --frozen-lockfile
