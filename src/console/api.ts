@@ -40,9 +40,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } | null;
     throw new Error(body?.message ?? "The console request failed.");
   }
-  return response.status === 204
-    ? (undefined as T)
-    : (response.json() as Promise<T>);
+  const body = await response.text();
+  return body.trim() ? (JSON.parse(body) as T) : (undefined as T);
 }
 
 export const adminApi = {
