@@ -1,9 +1,11 @@
 # Oidrune
 
+English | [简体中文](./README.zh-CN.md)
+
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/marketing/social-preview/oidrune-social-preview-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="./docs/marketing/social-preview/oidrune-social-preview-light.png">
-  <img src="./docs/marketing/social-preview/oidrune-social-preview-light.png" alt="Oidrune — GitHub Actions to Telegram notifications without repository secrets" width="1280" height="640">
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/marketing/social-preview/oidrune-social-preview-dark-en.png">
+  <source media="(prefers-color-scheme: light)" srcset="./docs/marketing/social-preview/oidrune-social-preview-light-en.png">
+  <img src="./docs/marketing/social-preview/oidrune-social-preview-light-en.png" alt="Oidrune — GitHub Actions to Telegram notifications without repository secrets" width="1280" height="640">
 </picture>
 
 Oidrune is a Cloudflare-hosted notification gateway for GitHub Actions. It
@@ -71,13 +73,17 @@ Queue consumer records `delivered` for that exact caller body.
 
 ## Brand Assets
 
-GitHub social previews (1280 × 640): [Dark PNG](./docs/marketing/social-preview/oidrune-social-preview-dark.png) · [Light PNG](./docs/marketing/social-preview/oidrune-social-preview-light.png).
+English GitHub social previews (1280 × 640): [Dark PNG](./docs/marketing/social-preview/oidrune-social-preview-dark-en.png) · [Light PNG](./docs/marketing/social-preview/oidrune-social-preview-light-en.png).
 
 Product posters (4:5, 2400 × 3000). Select a poster to view the full-size PNG.
 
 | Dark | Light |
 | --- | --- |
-| [<img src="./docs/marketing/posters/oidrune-poster-dark.png" alt="Oidrune product poster in dark colors" width="240" height="300">](./docs/marketing/posters/oidrune-poster-dark.png) | [<img src="./docs/marketing/posters/oidrune-poster-light.png" alt="Oidrune product poster in light colors" width="240" height="300">](./docs/marketing/posters/oidrune-poster-light.png) |
+| [<img src="./docs/marketing/posters/oidrune-poster-dark-en.png" alt="Oidrune English product poster in dark colors" width="240" height="300">](./docs/marketing/posters/oidrune-poster-dark-en.png) | [<img src="./docs/marketing/posters/oidrune-poster-light-en.png" alt="Oidrune English product poster in light colors" width="240" height="300">](./docs/marketing/posters/oidrune-poster-light-en.png) |
+
+Chinese GitHub social previews: [Dark PNG](./docs/marketing/social-preview/oidrune-social-preview-dark.png) · [Light PNG](./docs/marketing/social-preview/oidrune-social-preview-light.png).
+
+Chinese product posters: [Dark PNG](./docs/marketing/posters/oidrune-poster-dark.png) · [Light PNG](./docs/marketing/posters/oidrune-poster-light.png).
 
 ## License
 
