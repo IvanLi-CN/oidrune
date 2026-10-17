@@ -2,11 +2,8 @@
 
 [English](./README.md) | 简体中文
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/marketing/social-preview/oidrune-social-preview-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="./docs/marketing/social-preview/oidrune-social-preview-light.png">
-  <img src="./docs/marketing/social-preview/oidrune-social-preview-light.png" alt="Oidrune —— 不让密钥进入仓库的 GitHub Actions 到 Telegram 通知网关">
-</picture>
+![Oidrune —— 不让密钥进入仓库的 GitHub Actions 到 Telegram 通知网关](./docs/marketing/social-preview/oidrune-social-preview-dark.png#gh-dark-mode-only)
+![Oidrune —— 不让密钥进入仓库的 GitHub Actions 到 Telegram 通知网关](./docs/marketing/social-preview/oidrune-social-preview-light.png#gh-light-mode-only)
 
 Oidrune 是一个托管在 Cloudflare 上的 GitHub Actions 通知网关。它只接受来自已批准所有者或仓库、经过 GitHub 签名的 OIDC 令牌，然后将结构化的工作流完成通知异步发送到由运营者控制的一个 Telegram 目的地。
 

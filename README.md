@@ -2,11 +2,8 @@
 
 English | [简体中文](./README.zh-CN.md)
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/marketing/social-preview/oidrune-social-preview-dark-en.png">
-  <source media="(prefers-color-scheme: light)" srcset="./docs/marketing/social-preview/oidrune-social-preview-light-en.png">
-  <img src="./docs/marketing/social-preview/oidrune-social-preview-light-en.png" alt="Oidrune — GitHub Actions to Telegram notifications without repository secrets">
-</picture>
+![Oidrune — GitHub Actions to Telegram notifications without repository secrets](./docs/marketing/social-preview/oidrune-social-preview-dark-en.png#gh-dark-mode-only)
+![Oidrune — GitHub Actions to Telegram notifications without repository secrets](./docs/marketing/social-preview/oidrune-social-preview-light-en.png#gh-light-mode-only)
 
 Oidrune is a Cloudflare-hosted notification gateway for GitHub Actions. It
 accepts only GitHub-signed OIDC tokens from an approved owner or repository,
