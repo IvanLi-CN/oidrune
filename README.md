@@ -68,20 +68,6 @@ normalizes it and does not add workflow metadata. The smoke workflow's
 follow-up verification job queries the matching D1 event and fails unless the
 Queue consumer records `delivered` for that exact caller body.
 
-## Brand Assets
-
-English GitHub social previews (1280 × 640): [Dark PNG](./docs/marketing/social-preview/oidrune-social-preview-dark-en.png) · [Light PNG](./docs/marketing/social-preview/oidrune-social-preview-light-en.png).
-
-Product posters (4:5, 2400 × 3000). Select a poster to view the full-size PNG.
-
-| Dark | Light |
-| --- | --- |
-| [<img src="./docs/marketing/posters/oidrune-poster-dark-en.png" alt="Oidrune English product poster in dark colors" width="240" height="300">](./docs/marketing/posters/oidrune-poster-dark-en.png) | [<img src="./docs/marketing/posters/oidrune-poster-light-en.png" alt="Oidrune English product poster in light colors" width="240" height="300">](./docs/marketing/posters/oidrune-poster-light-en.png) |
-
-Chinese GitHub social previews: [Dark PNG](./docs/marketing/social-preview/oidrune-social-preview-dark.png) · [Light PNG](./docs/marketing/social-preview/oidrune-social-preview-light.png).
-
-Chinese product posters: [Dark PNG](./docs/marketing/posters/oidrune-poster-dark.png) · [Light PNG](./docs/marketing/posters/oidrune-poster-light.png).
-
 ## License
 
 MIT.

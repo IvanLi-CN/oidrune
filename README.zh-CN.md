@@ -37,18 +37,6 @@ Oidrune 是一个 Bun 单包项目。使用 `bun install` 安装依赖，然后�
 
 `Oidrune smoke` 工作流是一个永久保留的手动端到端检查。从 `main` 分支打开 GitHub Actions，选择 `Oidrune smoke`，然后选择 **Run workflow**。它会通过 GitHub OIDC 调用 SHA 固定的 `notify.yml` 发布工作流，要求公开网关返回 `202`，并在网关移交耗尽时使通知任务失败。接收成功的事件会为配置的 Telegram 目的地排队一次通知尝试；投递还需要 Worker 中单独管理的 Telegram secret。调用方不需要任何 secret。调用方提供的 `summary` 会作为完整的 Telegram 正文；Oidrune 只做规范化，不添加工作流元数据。后续验证任务会查询对应的 D1 事件，并在 Queue consumer 没有为该调用方正文记录 `delivered` 时失败。
 
-## 品牌素材
-
-中文 GitHub social preview（1280 × 640）：[深色 PNG](./docs/marketing/social-preview/oidrune-social-preview-dark.png) · [亮色 PNG](./docs/marketing/social-preview/oidrune-social-preview-light.png)。
-
-中文产品海报（4:5，2400 × 3000）：
-
-| 深色 | 亮色 |
-| --- | --- |
-| [<img src="./docs/marketing/posters/oidrune-poster-dark.png" alt="Oidrune 中文深色产品海报" width="240" height="300">](./docs/marketing/posters/oidrune-poster-dark.png) | [<img src="./docs/marketing/posters/oidrune-poster-light.png" alt="Oidrune 中文亮色产品海报" width="240" height="300">](./docs/marketing/posters/oidrune-poster-light.png) |
-
-英文素材：[social preview 深色版](./docs/marketing/social-preview/oidrune-social-preview-dark-en.png) · [social preview 亮色版](./docs/marketing/social-preview/oidrune-social-preview-light-en.png) · [深色海报](./docs/marketing/posters/oidrune-poster-dark-en.png) · [亮色海报](./docs/marketing/posters/oidrune-poster-light-en.png)。
-
 ## License
 
 MIT。
