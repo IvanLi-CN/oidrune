@@ -19,11 +19,10 @@ policy aligned.
 | Check | Source workflow | Purpose |
 | --- | --- | --- |
 | `quality` | `CI PR` | Aggregates lint, typecheck, unit tests, Worker build, and console E2E. |
-| `Label Gate` | `Label Gate` | Requires one valid release intent before merge. |
 
-The checked-in declaration will name both checks as `required_checks`, list no
-informational checks or waivers, and enumerate the expected PR workflow/job
-names. GitHub Rulesets must require the same two contexts from GitHub Actions.
+The checked-in declaration names `quality` as the only required PR check, lists
+no informational checks or waivers, and enumerates the expected PR workflow/job
+name. GitHub Rulesets must require the same context from GitHub Actions.
 
 ## Workflow Topology
 
@@ -31,35 +30,30 @@ names. GitHub Rulesets must require the same two contexts from GitHub Actions.
   jobs are `Lint & Format Check`, `Typecheck`, `Unit Tests`, `Worker
   Integration`, `Dependency vulnerability scan`, `Worker Build`, and `Console
   E2E`; the final `quality` job fails unless all predecessors pass.
-- **Label Gate**: runs from trusted workflow source when a pull request is
-  opened, synchronized, or its labels change, and for `merge_group` checks. It
-  resolves queue members through GitHub metadata and fails closed when that
-  membership cannot be proven. Every member must have exactly one `type:major`,
-  `type:minor`, `type:patch`, or `type:skip`, plus `channel:stable`.
 - **CI Main**: runs the production-relevant checks after merge. It is not
   cancelable by later pushes.
-- **Release**: consumes the validated merge intent after successful CI Main,
-  creates a stable SemVer GitHub Release, deploys the Worker, records the
-  release snapshot, and automatically promotes its reusable workflow SHA.
-- **Release Failure Notification**: the failure job in `Release` reports
-  release failures through Oidrune's non-blocking notification policy and
-  sends its caller-provided failure summary. Structured release intent, commit,
-  and run context remain in the workflow and Oidrune audit records. It uses a
-  separately pinned, permanently trusted reusable workflow SHA; a prepared
-  snapshot never grants ingress authority.
+- **Release**: runs only from a manual dispatch on `main`. The operator enters
+  a stable SemVer, the workflow normalizes it to a `vMAJOR.MINOR.PATCH` tag,
+  binds the release to the dispatch commit, requires successful CI Main for
+  that commit, deploys the Worker, creates the GitHub Release, and promotes
+  the same commit as a Trusted Workflow Release.
+- **Release Failure Notification**: the failure job in `Release` reports a
+  failed manual release through Oidrune's non-blocking notification policy. It
+  uses a separately pinned, permanently trusted reusable workflow SHA.
 
 ## Release Durability
 
-Release intent is snapshotted by merge commit. A durable release record or
-queue supports serialized processing, manual backfill by commit SHA, and
-retrying a failed release without guessing labels from a changed PR head.
-Prepared and failed snapshots are release metadata only. They never authorize
-a reusable workflow SHA, and a release failure closes a prepared snapshot.
+The explicit version and the dispatch commit are the release identity. The
+workflow rejects a version tag owned by another commit, rejects a stable tag
+already assigned to the same commit under another version, and reuses a
+matching tag or Release on retry. GitHub tags and Releases are never moved or
+overwritten for a conflicting request. PR labels are metadata only and never
+choose a release type or version.
 
 ## Alignment Gate
 
 Before the first release, an authorized operator must use `gh` to verify and
 align the GitHub Ruleset with this document and the checked-in declaration.
-The alignment checks branch protection, required contexts, signed commits,
+The alignment checks branch protection, the `quality` context, signed commits,
 PR-only behavior, and full-SHA action policy. External GitHub changes require
 separate authorization and are not implied by local CI passing.

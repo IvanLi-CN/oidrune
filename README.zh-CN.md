@@ -89,6 +89,10 @@ bun run test:e2e
 
 生产部署使用运营者配置的自定义域名。Fork Deployment 可以启用 `workers_dev` 并移除自定义域名路由，然后在冒烟测试中选择 fork 自己的 gateway URL 和 OIDC audience。部署元数据、Access 策略值、运营者身份和 Worker secrets 保留在仓库之外。
 
+## 发布交付
+
+合并 pull request 不会发布版本。运营者必须从 `main` 手动运行 `Release` 工作流，并输入稳定 SemVer，例如 `0.1.18` 或 `v0.1.18`。工作流会规范化标签，使用手动运行时 `main` 选中的提交，要求该提交的 `CI Main` 已成功，然后构建、部署、创建 GitHub Release，并将同一个提交登记为受信任可复用工作流版本。PR 标签只作为元数据，不决定发布或版本。
+
 ## 仓库结构
 
 - `src/worker/`：OIDC 入口、管理员 API、Queue consumer 和投递逻辑。

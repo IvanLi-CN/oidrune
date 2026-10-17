@@ -89,6 +89,10 @@ An Oidrune deployment consists of a Cloudflare Worker, D1 database, delivery Que
 
 The production deployment uses an operator-configured custom domain. A Fork Deployment may use `workers.dev` by enabling `workers_dev` and removing the custom-domain route, then selecting the fork's gateway URL and OIDC audience for its smoke test. Deployment metadata, Access policy values, operator identities, and Worker secrets stay outside the repository.
 
+## Release delivery
+
+Merging a pull request never publishes a release. An operator must manually run the `Release` workflow from `main` with a stable SemVer such as `0.1.18` or `v0.1.18`. The workflow normalizes the tag, uses the commit selected by `main` at dispatch time, requires successful `CI Main` for that commit, and then builds, deploys, creates the GitHub Release, and trusts the same commit for the reusable workflow. Pull request labels are metadata only and do not choose a release or version.
+
 ## Repository layout
 
 - `src/worker/`: OIDC ingress, admin API, Queue consumer, and delivery logic.

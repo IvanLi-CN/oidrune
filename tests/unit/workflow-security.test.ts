@@ -2,24 +2,39 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 describe("release workflow security boundaries", () => {
-  it("validates a backfill SHA as a main ancestor before checking it out", async () => {
+  it("validates the manual version and current main commit before checking it out", async () => {
     const workflow = await readWorkflow("release.yml");
-    const validation = workflow.indexOf("name: Validate release target");
-    const checkout = workflow.indexOf("uses: actions/checkout@");
+    const validation = workflow.indexOf(
+      "name: Validate manual release request",
+    );
+    const checkout = workflow.indexOf("name: Checkout validated release");
 
     expect(validation).toBeGreaterThanOrEqual(0);
     expect(checkout).toBeGreaterThan(validation);
-    expect(workflow).toContain("github.rest.repos.compareCommits");
-    expect(workflow).toContain('base: sha, head: "main"');
-    expect(workflow).toContain('pr.merged_at && pr.base.ref === "main"');
+    expect(workflow).toContain("workflow_dispatch:");
+    expect(workflow).toContain(`REQUESTED_VERSION: \${{ inputs.version }}`);
+    expect(workflow).toContain(`TARGET_SHA: \${{ github.sha }}`);
+    expect(workflow).toContain("github.rest.actions.listWorkflowRuns");
+    expect(workflow).toContain('workflow_id: "ci-main.yml"');
+    expect(workflow).toContain('run.conclusion === "success"');
+    expect(workflow).toContain("Version must be stable SemVer");
+    expect(workflow).toContain("const tagName = `v" + "$" + "{version}`");
+    expect(workflow).not.toContain("merge_commit_sha");
+    expect(workflow).not.toContain("type:patch");
+    expect(workflow).not.toContain("channel:stable");
   });
 
-  it("allows a manual release only from the main workflow definition", async () => {
+  it("does not publish after CI Main or PR metadata changes", async () => {
     const workflow = await readWorkflow("release.yml");
 
     expect(workflow).toContain(
       "github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'",
     );
+    expect(workflow).not.toContain("workflow_run:");
+    expect(workflow).not.toContain("pull_request:");
+    expect(workflow).not.toContain("push:");
+    expect(workflow).not.toContain("github.event.workflow_run");
+    expect(workflow).not.toContain("labels");
   });
 
   it("checks revocation before checking out the validated release target", async () => {
@@ -33,12 +48,28 @@ describe("release workflow security boundaries", () => {
     expect(targetCheckout).toBeGreaterThan(revocationCheck);
   });
 
+  it("fails closed on conflicting tags and reuses matching release identity", async () => {
+    const workflow = await readWorkflow("release.yml");
+
+    expect(workflow).toContain("resolveTagTarget");
+    expect(workflow).toContain("already points to");
+    expect(workflow).toContain("already has stable release tag");
+    expect(workflow).toContain(
+      "Existing matching tag or release will be reused",
+    );
+    expect(workflow).toContain(
+      `target_commitish: \${{ needs.validate-release-request.outputs.sha }}`,
+    );
+  });
+
   it("uses a permanently pinned release for failure notification instead of a prepared snapshot", async () => {
     const workflow = await readWorkflow("release.yml");
 
-    expect(workflow).toContain("close-failed-release-snapshot");
     expect(workflow).toMatch(
       /uses:\s+IvanLi-CN\/oidrune\/\.github\/workflows\/notify\.yml@[a-f0-9]{40}/,
+    );
+    expect(workflow).toContain(
+      "needs.validate-release-request.result == 'success'",
     );
     expect(workflow).not.toContain("uses: ./.github/workflows/notify.yml");
   });

@@ -49,6 +49,7 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - [Leased Delivery Claims](../../adr/0005-leased-delivery-claims.md)
 - [Portable Gateway Selection](../../adr/0006-portable-gateway-selection.md)
 - [GitHub-Only Operator Identity Through Cloudflare Access](../../adr/0007-github-only-operator-identity.md)
+- [Manual Version Release Delivery](../../adr/0008-manual-version-release-delivery.md)
 
 ## Requirements
 
@@ -117,6 +118,15 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   details, Access audience and team domain, and deployed policy values MUST NOT
   be committed to the repository. Tests and documentation MAY use only clearly
   fictitious placeholders.
+- REQ-RELEASE: The Release workflow MUST run only from a manual dispatch on
+  `main` with one stable `MAJOR.MINOR.PATCH` version input, accepting an
+  optional `v` prefix. It MUST bind the request to the dispatch commit, require
+  successful `CI Main` for that commit before any deployment or publication,
+  and use that same commit for the Worker deployment, GitHub Release, and
+  Trusted Workflow Release. It MUST reject conflicting tags and MUST NOT use
+  pull request labels to choose a release or version. A retry with the same
+  version and commit MAY reuse the existing identity; a conflicting version or
+  commit MUST fail closed.
 - REQ-RETENTION: Successful events MUST be retained for 30 days; failed and DLQ events for 90
   days. OIDC JWTs, Bot Tokens, and raw request bodies MUST NOT be persisted.
 
@@ -156,13 +166,14 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 5. An authenticated operator manages source policies, the one destination,
    trusted workflow releases, events, DLQ retry, and fixed test messages from
    the console.
-6. The Oidrune Release workflow accepts manual dispatch only from `main` and
-   validates every target is reachable from `main` before using its code. It
-   checks revocation through trusted `main` release infrastructure, records a
-   prepared release snapshot, and tags, deploys, then permanently trusts a
-   successful release SHA. Prepared and failed snapshots are never trusted. The
-   failure-notification job uses a separately pinned permanent trusted release,
-   while the console can revoke or manually restore a permanent trust record.
+6. The Oidrune Release workflow accepts only a manual dispatch from `main` with
+   a stable SemVer. It normalizes the optional `v` prefix, binds the request to
+   the dispatch commit, requires successful `CI Main` for that commit, checks
+   tag and Release conflicts, then tags, deploys, publishes, and permanently
+   trusts that same SHA. A matching retry reuses the existing identity; a
+   conflicting version or SHA fails before deployment. The failure-notification
+   job uses a separately pinned permanent trusted release, while the console
+   can revoke or manually restore a permanent trust record.
 
 ### Edge cases / errors
 
@@ -223,6 +234,11 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 - VER-PRIVACY covers: REQ-PRIVACY
   Given a GitHub-only Operator authentication change or failure, the public
   GitHub Actions OIDC ingress remains reachable and independently authenticated.
+- VER-RELEASE covers: REQ-RELEASE
+  Given a manual request from `main`, a valid stable version and successful
+  `CI Main` for the dispatch commit, the Release workflow uses that commit for
+  deployment and publication. An invalid version, missing `CI Main`, tag
+  conflict, non-`main` dispatch, or PR label change produces no release.
 
 ## 非功能性验收 / 质量门槛
 
@@ -247,9 +263,9 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 ### Quality checks
 
 - Biome `check`, TypeScript `typecheck`, unit/integration test, Worker build,
-  console E2E, `quality` aggregate, and Label Gate as defined in
-  `../../quality-gates.md`. Label Gate MUST validate the same release-label
-  contract for pull requests and merge-queue groups.
+  console E2E, and the `quality` aggregate as defined in
+  `../../quality-gates.md`. Release validation covers the manual version,
+  dispatch target, CI Main result, and tag conflict path.
 
 ## Visual Evidence
 

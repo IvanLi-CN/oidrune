@@ -10,17 +10,13 @@
       "disallow_direct_pushes": true
     }
   },
-  "required_checks": ["quality", "Label Gate"],
+  "required_checks": ["quality"],
   "informational_checks": [],
   "waivers": [],
   "expected_pr_workflows": [
     {
       "workflow": "CI PR",
       "jobs": ["quality"]
-    },
-    {
-      "workflow": "Label Gate",
-      "jobs": ["Label Gate"]
     }
   ],
   "main_workflow": "CI Main",

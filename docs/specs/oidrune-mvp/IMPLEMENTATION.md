@@ -22,7 +22,7 @@ src/
   console/         React routes and feature modules
   shared/          schemas, presentation-safe types, formatter helpers
 migrations/         D1 schema changes
-.github/            CI, quality declaration, label/release/deploy workflows
+.github/            CI, quality declaration, release/deploy workflows
 docs/               product, ADR, quality contract, and Specs
 ```
 
@@ -47,7 +47,7 @@ docs/               product, ADR, quality contract, and Specs
 | Resource | Responsibility |
 | --- | --- |
 | Worker + Static Assets | Public ingress, queue consumer, scheduled retention cleanup, console API and UI. |
-| D1 | Dynamic policy, destination metadata, normalized events, attempts, DLQ views, release snapshots, and audit trail. |
+| D1 | Dynamic policy, destination metadata, normalized events, attempts, DLQ views, and audit trail. |
 | Queue + DLQ | At-least-once handoff and bounded Telegram delivery retries. |
 | Durable Object | Atomic JWT `jti` replay reservation until token expiry. |
 | Worker Secrets | Telegram Bot Token and deployment-only secrets; never browser-readable. |
@@ -58,7 +58,7 @@ docs/               product, ADR, quality contract, and Specs
 1. Bootstrap the single-package Bun project, static gates, Worker test harness,
    and React/Worker Vite build without external deployment.
 2. Implement the domain schemas and D1 migrations for policy, events,
-   attempts, trusted releases, release snapshots, and audit records.
+   attempts, trusted releases, and audit records.
 3. Implement GitHub OIDC verification, replay reservation, Source Admission,
    structured ingress, and Queue handoff.
 4. Implement Telegram consumer retries, DLQ, cleanup schedule, caller-body
@@ -67,8 +67,8 @@ docs/               product, ADR, quality contract, and Specs
    the HTTP contract.
 6. Add the public reusable workflow, same-repository PR guard, client retry,
    warning/fail policy, and example caller documentation.
-7. Add the declared CI, Label Gate, release snapshot/backfill, Release,
-   deployment, and release-failure notification workflows.
+7. Add the declared CI, manual version Release, deployment, and release-failure
+   notification workflows.
 8. After explicit authorization, provision Cloudflare resources, configure
    Access paths, set Worker Secrets, and create the Telegram target.
 
@@ -146,10 +146,12 @@ After explicit authorization for real-environment verification:
 
 ## Release Promotion Coverage
 
-The Release workflow must deploy the Worker first, then transactionally record
-the release commit's reusable workflow SHA as trusted. It must retain a durable
-release snapshot keyed by merge commit so a failed or interrupted release can
-be backfilled without recalculating PR labels from mutable state.
+The Release workflow must validate a manual stable version, the current `main`
+commit, successful `CI Main`, and immutable tag ownership before deploying the
+Worker. It then publishes the GitHub Release and transactionally records the
+same commit's reusable workflow SHA as trusted. A retry may reuse the matching
+tag and Release, but it cannot move a tag or assign another stable version to
+the same commit.
 
 ## Remaining Gaps
 
