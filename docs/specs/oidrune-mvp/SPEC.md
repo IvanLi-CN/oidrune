@@ -119,14 +119,13 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   be committed to the repository. Tests and documentation MAY use only clearly
   fictitious placeholders.
 - REQ-RELEASE: The Release workflow MUST run only from a manual dispatch on
-  `main` with one stable `MAJOR.MINOR.PATCH` version input, accepting an
-  optional `v` prefix. It MUST bind the request to the dispatch commit, require
-  successful `CI Main` for that commit before any deployment or publication,
-  and use that same commit for the Worker deployment, GitHub Release, and
-  Trusted Workflow Release. It MUST reject conflicting tags and MUST NOT use
-  pull request labels to choose a release or version. A retry with the same
-  version and commit MAY reuse the existing identity; a conflicting version or
-  commit MUST fail closed.
+  `main` and MUST generate a stable release version from the workflow run
+  number. It MUST bind the request to the dispatch commit, require successful
+  `CI Main` for that commit before any deployment or publication, and use that
+  same commit for the Worker deployment, GitHub Release, and Trusted Workflow
+  Release. It MUST reject conflicting tags and MUST NOT use pull request labels
+  to choose whether a release occurs. A retry of the same workflow run MAY
+  reuse the existing identity; a conflicting tag or commit MUST fail closed.
 - REQ-RETENTION: Successful events MUST be retained for 30 days; failed and DLQ events for 90
   days. OIDC JWTs, Bot Tokens, and raw request bodies MUST NOT be persisted.
 
@@ -166,14 +165,14 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 5. An authenticated operator manages source policies, the one destination,
    trusted workflow releases, events, DLQ retry, and fixed test messages from
    the console.
-6. The Oidrune Release workflow accepts only a manual dispatch from `main` with
-   a stable SemVer. It normalizes the optional `v` prefix, binds the request to
+6. The Oidrune Release workflow accepts only a manual dispatch from `main` and
+   generates a stable tag from the workflow run number. It binds the request to
    the dispatch commit, requires successful `CI Main` for that commit, checks
    tag and Release conflicts, then tags, deploys, publishes, and permanently
-   trusts that same SHA. A matching retry reuses the existing identity; a
-   conflicting version or SHA fails before deployment. The failure-notification
-   job uses a separately pinned permanent trusted release, while the console
-   can revoke or manually restore a permanent trust record.
+   trusts that same SHA. A retry of the same workflow run reuses the existing
+   identity; a conflicting tag or SHA fails before deployment. The
+   failure-notification job uses a separately pinned permanent trusted release,
+   while the console can revoke or manually restore a permanent trust record.
 
 ### Edge cases / errors
 
@@ -235,10 +234,10 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   Given a GitHub-only Operator authentication change or failure, the public
   GitHub Actions OIDC ingress remains reachable and independently authenticated.
 - VER-RELEASE covers: REQ-RELEASE
-  Given a manual request from `main`, a valid stable version and successful
-  `CI Main` for the dispatch commit, the Release workflow uses that commit for
-  deployment and publication. An invalid version, missing `CI Main`, tag
-  conflict, non-`main` dispatch, or PR label change produces no release.
+  Given a manual request from `main` and successful `CI Main` for the dispatch
+  commit, the Release workflow generates a stable tag and uses that commit for
+  deployment and publication. A missing `CI Main`, tag conflict, non-`main`
+  dispatch, or PR label change produces no release.
 
 ## 非功能性验收 / 质量门槛
 
@@ -264,7 +263,7 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 
 - Biome `check`, TypeScript `typecheck`, unit/integration test, Worker build,
   console E2E, and the `quality` aggregate as defined in
-  `../../quality-gates.md`. Release validation covers the manual version,
+  `../../quality-gates.md`. Release validation covers the generated version,
   dispatch target, CI Main result, and tag conflict path.
 
 ## Visual Evidence

@@ -91,7 +91,7 @@ The production deployment uses an operator-configured custom domain. A Fork Depl
 
 ## Release delivery
 
-Merging a pull request never publishes a release. An operator must manually run the `Release` workflow from `main` with a stable SemVer such as `0.1.18` or `v0.1.18`. The workflow normalizes the tag, uses the commit selected by `main` at dispatch time, requires successful `CI Main` for that commit, and then builds, deploys, creates the GitHub Release, and trusts the same commit for the reusable workflow. Pull request labels are metadata only and do not choose a release or version.
+Merging a pull request never publishes a release. An operator must manually run the `Release` workflow from `main`. The workflow derives a stable `v0.1.<run-number>` tag, uses the commit selected by `main` at dispatch time, requires successful `CI Main` for that commit, and then builds, deploys, creates the GitHub Release, and trusts the same commit for the reusable workflow. Pull request labels are metadata only and do not choose a release.
 
 ## Repository layout
 

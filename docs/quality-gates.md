@@ -32,23 +32,23 @@ name. GitHub Rulesets must require the same context from GitHub Actions.
   E2E`; the final `quality` job fails unless all predecessors pass.
 - **CI Main**: runs the production-relevant checks after merge. It is not
   cancelable by later pushes.
-- **Release**: runs only from a manual dispatch on `main`. The operator enters
-  a stable SemVer, the workflow normalizes it to a `vMAJOR.MINOR.PATCH` tag,
-  binds the release to the dispatch commit, requires successful CI Main for
-  that commit, deploys the Worker, creates the GitHub Release, and promotes
-  the same commit as a Trusted Workflow Release.
+- **Release**: runs only from a manual dispatch on `main`. The workflow
+  generates a stable `v0.1.<run-number>` tag, binds the release to the dispatch
+  commit, requires successful CI Main for that commit, deploys the Worker,
+  creates the GitHub Release, and promotes the same commit as a Trusted
+  Workflow Release.
 - **Release Failure Notification**: the failure job in `Release` reports a
   failed manual release through Oidrune's non-blocking notification policy. It
   uses a separately pinned, permanently trusted reusable workflow SHA.
 
 ## Release Durability
 
-The explicit version and the dispatch commit are the release identity. The
+The generated version and the dispatch commit are the release identity. The
 workflow rejects a version tag owned by another commit, rejects a stable tag
 already assigned to the same commit under another version, and reuses a
-matching tag or Release on retry. GitHub tags and Releases are never moved or
-overwritten for a conflicting request. PR labels are metadata only and never
-choose a release type or version.
+matching tag or Release when the same workflow run is retried. GitHub tags and
+Releases are never moved or overwritten for a conflicting request. PR labels
+are metadata only and never choose whether a release occurs.
 
 ## Alignment Gate
 

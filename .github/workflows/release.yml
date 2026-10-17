@@ -2,11 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: Stable SemVer to release, with an optional v prefix.
-        required: true
-        type: string
 
 permissions: {}
 
@@ -23,21 +18,20 @@ jobs:
       version: ${{ steps.request.outputs.version }}
       tag: ${{ steps.request.outputs.tag }}
     steps:
-      - name: Validate version, main target, and CI Main
+      - name: Validate generated version, main target, and CI Main
         id: request
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         env:
-          REQUESTED_VERSION: ${{ inputs.version }}
+          RELEASE_RUN_NUMBER: ${{ github.run_number }}
           TARGET_SHA: ${{ github.sha }}
         with:
           script: |
-            const requestedVersion = (process.env.REQUESTED_VERSION ?? "").trim();
-            const versionMatch = requestedVersion.match(/^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/);
-            if (!versionMatch) {
-              throw new Error("Version must be stable SemVer in MAJOR.MINOR.PATCH form, with an optional v prefix.");
+            const runNumber = Number(process.env.RELEASE_RUN_NUMBER);
+            if (!Number.isSafeInteger(runNumber) || runNumber < 1) {
+              throw new Error("The workflow run number must be a positive integer.");
             }
 
-            const version = `${versionMatch[1]}.${versionMatch[2]}.${versionMatch[3]}`;
+            const version = `0.1.${runNumber}`;
             const tagName = `v${version}`;
             const sha = process.env.TARGET_SHA;
             if (!/^[a-f0-9]{40}$/.test(sha ?? "")) {

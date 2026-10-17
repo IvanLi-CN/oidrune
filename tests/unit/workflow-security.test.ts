@@ -2,22 +2,23 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 
 describe("release workflow security boundaries", () => {
-  it("validates the manual version and current main commit before checking it out", async () => {
+  it("validates the generated version and current main commit before checking it out", async () => {
     const workflow = await readWorkflow("release.yml");
     const validation = workflow.indexOf(
-      "name: Validate manual release request",
+      "name: Validate generated version, main target, and CI Main",
     );
     const checkout = workflow.indexOf("name: Checkout validated release");
 
     expect(validation).toBeGreaterThanOrEqual(0);
     expect(checkout).toBeGreaterThan(validation);
     expect(workflow).toContain("workflow_dispatch:");
-    expect(workflow).toContain(`REQUESTED_VERSION: \${{ inputs.version }}`);
+    expect(workflow).toContain(`RELEASE_RUN_NUMBER: \${{ github.run_number }}`);
     expect(workflow).toContain(`TARGET_SHA: \${{ github.sha }}`);
     expect(workflow).toContain("github.rest.actions.listWorkflowRuns");
     expect(workflow).toContain('workflow_id: "ci-main.yml"');
     expect(workflow).toContain('run.conclusion === "success"');
-    expect(workflow).toContain("Version must be stable SemVer");
+    expect(workflow).toContain("const version = `0.1." + "$" + "{runNumber}`");
+    expect(workflow).not.toContain("inputs:");
     expect(workflow).toContain("const tagName = `v" + "$" + "{version}`");
     expect(workflow).not.toContain("merge_commit_sha");
     expect(workflow).not.toContain("type:patch");
