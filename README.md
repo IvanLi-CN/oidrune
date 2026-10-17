@@ -5,7 +5,7 @@ English | [简体中文](./README.zh-CN.md)
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./docs/marketing/social-preview/oidrune-social-preview-dark-en.png">
   <source media="(prefers-color-scheme: light)" srcset="./docs/marketing/social-preview/oidrune-social-preview-light-en.png">
-  <img src="./docs/marketing/social-preview/oidrune-social-preview-light-en.png" alt="Oidrune — GitHub Actions to Telegram notifications without repository secrets" width="1280" height="640">
+  <img src="./docs/marketing/social-preview/oidrune-social-preview-light-en.png" alt="Oidrune — GitHub Actions to Telegram notifications without repository secrets">
 </picture>
 
 Oidrune is a Cloudflare-hosted notification gateway for GitHub Actions. It
