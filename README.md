@@ -113,4 +113,4 @@ From `main`, run [Oidrune smoke](./.github/workflows/oidrune-smoke.yml) manually
 
 ## License
 
-MIT.
+[MIT License](./LICENSE).

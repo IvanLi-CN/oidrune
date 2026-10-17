@@ -113,4 +113,4 @@ bun run test:e2e
 
 ## 许可
 
-MIT。
+[MIT License](./LICENSE)。
