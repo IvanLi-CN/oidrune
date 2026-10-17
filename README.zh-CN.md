@@ -67,10 +67,10 @@ jobs:
 
 ```bash
 bun install
-bun run dev
+bunx vite --config vite.demo.config.ts --host 127.0.0.1 --port 4173
 ```
 
-打开 `http://127.0.0.1:4173/console/` 查看确定性的控制台演示。该演示不会调用 Cloudflare Access、D1、Queues 或 Telegram。
+打开 `http://127.0.0.1:4173/` 查看确定性的控制台演示。该演示不会调用 Cloudflare Access、D1、Queues 或 Telegram。
 
 执行聚合质量检查或专项检查：
 

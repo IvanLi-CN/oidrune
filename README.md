@@ -67,10 +67,10 @@ Requirements: Bun `>=1.4.0`.
 
 ```bash
 bun install
-bun run dev
+bunx vite --config vite.demo.config.ts --host 127.0.0.1 --port 4173
 ```
 
-Open `http://127.0.0.1:4173/console/` for the deterministic console demo. It does not call Cloudflare Access, D1, Queues, or Telegram.
+Open `http://127.0.0.1:4173/` for the deterministic console demo. It does not call Cloudflare Access, D1, Queues, or Telegram.
 
 Run the aggregate quality check or a focused check with:
 
