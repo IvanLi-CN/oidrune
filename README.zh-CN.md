@@ -91,7 +91,7 @@ bun run test:e2e
 
 ## 发布交付
 
-合并 pull request 不会发布版本。运营者必须从 `main` 手动运行 `Release` 工作流。工作流会根据运行编号生成稳定的 `v0.1.<run-number>` 标签，使用手动运行时 `main` 选中的提交，要求该提交的 `CI Main` 已成功，然后构建、部署、创建 GitHub Release，并将同一个提交登记为受信任可复用工作流版本。PR 标签只作为元数据，不决定是否发布。
+合并 pull request 不会发布版本。运营者必须从 `main` 手动运行 `Release` 工作流，并将 `release_target` 设置为 `patch`、`minor`、`major` 或最终版 `X.Y.Z`。工作流根据最新已验证的稳定 Release 解析版本，在该提交的 `CI Main` 成功后创建并发布 Draft Release 身份，然后自动部署同一个 source，验证受保护路由，最后将同一个提交登记为受信任可复用工作流版本。PR 标签和工作流运行编号只作为元数据，不决定是否发布。
 
 ## 仓库结构
 

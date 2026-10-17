@@ -119,13 +119,25 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   be committed to the repository. Tests and documentation MAY use only clearly
   fictitious placeholders.
 - REQ-RELEASE: The Release workflow MUST run only from a manual dispatch on
-  `main` and MUST generate a stable release version from the workflow run
-  number. It MUST bind the request to the dispatch commit, require successful
-  `CI Main` for that commit before any deployment or publication, and use that
-  same commit for the Worker deployment, GitHub Release, and Trusted Workflow
-  Release. It MUST reject conflicting tags and MUST NOT use pull request labels
-  to choose whether a release occurs. A retry of the same workflow run MAY
-  reuse the existing identity; a conflicting tag or commit MUST fail closed.
+  `main` with one `release_target` input accepting `patch`, `minor`, `major`,
+  or an explicit final `X.Y.Z`. For a new identity, it MUST resolve symbolic
+  targets from the latest verified non-prerelease stable Release whose tag is
+  reachable from `main`, bind the identity to the current `main` commit, and
+  require successful `CI Main` for that source before any deployment or
+  publication. If an unfinished reserved or published identity exists, it
+  MUST recover that identity from its recorded source when the source remains
+  reachable from current `main` and has passed `CI Main`; it MUST not allocate
+  a successor, and the recovery path MUST use the recorded baseline tag without
+  requiring the corresponding baseline Release object to remain listed. It MUST
+  reserve and publish one stable GitHub Release identity,
+  then automatically deploy that exact identity in a separate Deploy stage.
+  If the recorded source and current `main` differ in workflow files, recovery
+  MUST require the externally provisioned `OIDRUNE_RELEASE_TOKEN`; ordinary
+  releases MUST use only the workflow token's minimum required permissions.
+  It MUST reject conflicting tags, source identities, and reservations, and
+  MUST NOT use pull request labels or workflow run numbers to choose whether a
+  release occurs or which version is published. Release dispatches MUST be
+  serialized without silently replacing pending requests.
 - REQ-RETENTION: Successful events MUST be retained for 30 days; failed and DLQ events for 90
   days. OIDC JWTs, Bot Tokens, and raw request bodies MUST NOT be persisted.
 
@@ -165,14 +177,19 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 5. An authenticated operator manages source policies, the one destination,
    trusted workflow releases, events, DLQ retry, and fixed test messages from
    the console.
-6. The Oidrune Release workflow accepts only a manual dispatch from `main` and
-   generates a stable tag from the workflow run number. It binds the request to
-   the dispatch commit, requires successful `CI Main` for that commit, checks
-   tag and Release conflicts, then tags, deploys, publishes, and permanently
-   trusts that same SHA. A retry of the same workflow run reuses the existing
-   identity; a conflicting tag or SHA fails before deployment. The
-   failure-notification job uses a separately pinned permanent trusted release,
-   while the console can revoke or manually restore a permanent trust record.
+6. The Oidrune Release workflow accepts only a manual dispatch from `main` with
+   one release target. It resolves a stable version from the trusted baseline,
+   requires successful `CI Main` for the selected source commit, reserves and
+   publishes a matching GitHub Release, and then automatically runs Deploy for
+   that exact source identity. Deploy applies migrations, publishes the Worker,
+   verifies the protected route, and permanently trusts that SHA only after
+   success. A retry reuses the existing reservation and identity, including
+   after `main` advances when the original source remains reachable; an
+   unfinished identity blocks successor allocation. A conflicting tag, source,
+   target, or SHA fails closed before a new version is assigned.
+   The failure-notification job uses a separately pinned permanent trusted
+   release, while the console can revoke or manually restore a permanent trust
+   record.
 
 ### Edge cases / errors
 
@@ -234,10 +251,13 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
   Given a GitHub-only Operator authentication change or failure, the public
   GitHub Actions OIDC ingress remains reachable and independently authenticated.
 - VER-RELEASE covers: REQ-RELEASE
-  Given a manual request from `main` and successful `CI Main` for the dispatch
-  commit, the Release workflow generates a stable tag and uses that commit for
-  deployment and publication. A missing `CI Main`, tag conflict, non-`main`
-  dispatch, or PR label change produces no release.
+  Given a manual `release_target` from `main` and successful `CI Main` for the
+  selected source, the Release workflow resolves one stable version, reserves
+  and publishes a matching Release, then automatically deploys that same
+  source identity. A missing baseline, missing `CI Main`, tag or reservation
+  conflict, non-`main` dispatch, unreachable unfinished source, PR label
+  change, or workflow run-number change produces no alternate release
+  identity.
 
 ## 非功能性验收 / 质量门槛
 
@@ -263,7 +283,7 @@ GitHub Actions 可以直接调用 Telegram，但这种做法要求每个仓库�
 
 - Biome `check`, TypeScript `typecheck`, unit/integration test, Worker build,
   console E2E, and the `quality` aggregate as defined in
-  `../../quality-gates.md`. Release validation covers the generated version,
+  `../../quality-gates.md`. Release validation covers the resolved canonical version,
   dispatch target, CI Main result, and tag conflict path.
 
 ## Visual Evidence

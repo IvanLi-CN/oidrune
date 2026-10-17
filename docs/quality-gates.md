@@ -32,23 +32,37 @@ name. GitHub Rulesets must require the same context from GitHub Actions.
   E2E`; the final `quality` job fails unless all predecessors pass.
 - **CI Main**: runs the production-relevant checks after merge. It is not
   cancelable by later pushes.
-- **Release**: runs only from a manual dispatch on `main`. The workflow
-  generates a stable `v0.1.<run-number>` tag, binds the release to the dispatch
-  commit, requires successful CI Main for that commit, deploys the Worker,
-  creates the GitHub Release, and promotes the same commit as a Trusted
-  Workflow Release.
-- **Release Failure Notification**: the failure job in `Release` reports a
-  failed manual release through Oidrune's non-blocking notification policy. It
-  uses a separately pinned, permanently trusted reusable workflow SHA.
+- **Release**: runs only from a manual dispatch on `main` with one
+  `release_target` input. It resolves a stable SemVer from the latest verified
+  stable Release, creates or reuses a durable Draft Release reservation, and
+  publishes the reserved GitHub Release only after successful `CI Main` for
+  the selected source commit. Release dispatches are serialized with a bounded
+  pending queue; an unfinished reserved or published identity must recover
+  before a new version is allocated.
+- **Deploy**: runs automatically after `Release` succeeds, checks out the
+  exact published source identity, deploys the Worker, verifies the protected
+  route boundaries, and only then promotes that same SHA as a Trusted Workflow
+  Release.
+- **Release Failure Notification**: the failure job covers validation,
+  reservation, Release, and Deploy failures through Oidrune's non-blocking
+  notification policy. It uses a separately pinned, permanently trusted
+  reusable workflow SHA and sends metadata-only context.
 
 ## Release Durability
 
-The generated version and the dispatch commit are the release identity. The
-workflow rejects a version tag owned by another commit, rejects a stable tag
-already assigned to the same commit under another version, and reuses a
-matching tag or Release when the same workflow run is retried. GitHub tags and
-Releases are never moved or overwritten for a conflicting request. PR labels
-are metadata only and never choose whether a release occurs.
+The release target, canonical version, source commit, stable tag, and Draft
+Release reservation form the release identity. The workflow rejects a tag or
+Release owned by another commit, rejects a source commit with a different
+release target, and reuses the same identity for recovery even after `main`
+advances when the original source remains reachable. Unfinished identities
+block successor allocation. Recovery across a workflow-file change requires
+the externally provisioned `OIDRUNE_RELEASE_TOKEN`; the ordinary
+`GITHUB_TOKEN` remains least-privileged for normal runs. Recovery uses the
+recorded baseline tag and does not require the corresponding Release object to
+remain listed. The workflow rechecks that the trusted source remains active
+before recording the identity as deployed. GitHub tags and Releases are never
+moved or overwritten for a conflicting request. PR labels and workflow run
+numbers are not release inputs.
 
 ## Alignment Gate
 

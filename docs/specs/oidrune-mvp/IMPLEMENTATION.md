@@ -146,12 +146,24 @@ After explicit authorization for real-environment verification:
 
 ## Release Promotion Coverage
 
-The Release workflow must validate a manual stable version, the current `main`
-commit, successful `CI Main`, and immutable tag ownership before deploying the
-Worker. It then publishes the GitHub Release and transactionally records the
-same commit's reusable workflow SHA as trusted. A retry may reuse the matching
-tag and Release, but it cannot move a tag or assign another stable version to
-the same commit.
+The Release workflow must validate one manual `release_target`, the current
+`main` commit, successful `CI Main`, the latest verified stable Release, and
+immutable tag ownership. It reserves the resulting identity as a Draft
+GitHub Release, publishes that reservation, and then automatically runs the
+separate Deploy stage for the exact source SHA. Deploy applies migrations,
+builds the console, deploys the Worker, verifies the protected route, and
+records the same source SHA as a Trusted Workflow Release only after the
+deployment succeeds. A retry may reuse the same reservation, tag, and Release
+after `main` advances when the original source remains reachable, but it
+cannot move a tag, allocate a successor, or restore a revoked trust record. If
+the source-to-main delta changes workflow files, the operator must provision
+`OIDRUNE_RELEASE_TOKEN` with Contents and Workflows write access for that
+recovery path.
+
+The checked-in `.github/release-contract.json` is the repository release
+contract. It records the target grammar, stable baseline rule, release identity
+fields, Draft Release reservation, automatic post-Release deployment, and
+the existing metadata-only Oidrune notification transport.
 
 ## Remaining Gaps
 

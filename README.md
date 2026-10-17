@@ -87,11 +87,11 @@ bun run test:e2e
 
 An Oidrune deployment consists of a Cloudflare Worker, D1 database, delivery Queue and dead-letter Queue, replay-protection Durable Object, Cloudflare Access application, and a Worker-managed Telegram secret. The public ingress stays outside Access; `/console*` and `/api/admin*` remain protected.
 
-The production deployment uses an operator-configured custom domain. A Fork Deployment may use `workers.dev` by enabling `workers_dev` and removing the custom-domain route, then selecting the fork's gateway URL and OIDC audience for its smoke test. Deployment metadata, Access policy values, operator identities, and Worker secrets stay outside the repository.
+The production deployment uses an operator-configured custom domain. A Fork Deployment may use `workers.dev` by enabling `workers_dev` and removing the custom-domain route, then selecting the fork's gateway URL and OIDC audience for its smoke test. Set the `OIDRUNE_PUBLIC_ORIGIN` repository variable when the deployed origin differs from the production default so Release route verification checks the actual target. Deployment metadata, Access policy values, operator identities, and Worker secrets stay outside the repository.
 
 ## Release delivery
 
-Merging a pull request never publishes a release. An operator must manually run the `Release` workflow from `main`. The workflow derives a stable `v0.1.<run-number>` tag, uses the commit selected by `main` at dispatch time, requires successful `CI Main` for that commit, and then builds, deploys, creates the GitHub Release, and trusts the same commit for the reusable workflow. Pull request labels are metadata only and do not choose a release.
+Merging a pull request never publishes a release. An operator must manually run the `Release` workflow from `main` with `release_target` set to `patch`, `minor`, `major`, or a final `X.Y.Z`. The workflow resolves the target from the latest verified stable Release, reserves and publishes a Draft Release identity after successful `CI Main`, automatically deploys that exact source, verifies the protected routes, and then trusts the same commit for the reusable workflow. Pull request labels and workflow run numbers are metadata only and do not choose a release.
 
 ## Repository layout
 
