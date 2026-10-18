@@ -46,6 +46,14 @@ describe("quality-gate declaration", () => {
     expect(workflowFiles).not.toContain("label-gate.yml");
   });
 
+  it("documents the actionlint compatibility boundary for release queue syntax", async () => {
+    const qualityGates = await readFile("docs/quality-gates.md", "utf8");
+
+    expect(qualityGates).toContain("`actionlint` 1.7.12");
+    expect(qualityGates).toContain("concurrency.queue: max");
+    expect(qualityGates).toContain("does not replace the GitHub runtime check");
+  });
+
   it("pins each external GitHub Action to a full commit SHA", async () => {
     const workflowFiles = await readdir(".github/workflows");
     const workflows = await Promise.all(
