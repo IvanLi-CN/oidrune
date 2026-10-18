@@ -24,6 +24,12 @@ The checked-in declaration names `quality` as the only required PR check, lists
 no informational checks or waivers, and enumerates the expected PR workflow/job
 name. GitHub Rulesets must require the same context from GitHub Actions.
 
+## Workflow Syntax Validation
+
+The repository does not currently install `actionlint` as a CI gate. The GitHub Actions runtime and official workflow syntax are authoritative for `.github/workflows/*.yml`; in particular, `concurrency.queue: max` is valid and preserves pending Release dispatches instead of replacing them.
+
+The current local `actionlint` 1.7.12 reports `unexpected key "queue"` for this supported syntax. Treat that result as a validator-version gap: retain `queue: max`, and use `actionlint -ignore 'unexpected key "queue" for "concurrency" section' .github/workflows/*.yml` together with YAML parsing and embedded-script checks until the validator supports the schema. This compatibility invocation is not a CI pass and does not replace the GitHub runtime check. See the [GitHub Actions concurrency documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
+
 ## Workflow Topology
 
 - **CI PR**: runs for pull requests to `main` and `merge_group`; independent
