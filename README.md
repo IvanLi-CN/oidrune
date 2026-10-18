@@ -1,4 +1,11 @@
 <p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="./src/console/public/brand/v25/svg/oidrune-b3.svg" />
+    <img src="./src/console/public/brand/v25/svg/oidrune-b1.svg" alt="Oidrune logo" width="300" />
+  </picture>
+</p>
+
+<p align="center">
   <a href="./README.md">English</a> · <a href="./README.zh-CN.md">简体中文</a>
 </p>
 
