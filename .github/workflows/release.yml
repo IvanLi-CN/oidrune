@@ -36,7 +36,7 @@ jobs:
     steps:
       - name: Validate release target, trusted baseline, and CI Main
         id: request
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         env:
           RELEASE_TARGET: ${{ inputs.release_target }}
           SOURCE_SHA: ${{ github.sha }}
@@ -370,7 +370,7 @@ jobs:
     steps:
       - name: Determine release write authorization
         id: authority
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         env:
           SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
           INITIAL_RECOVERY_TOKEN_REQUIRED: ${{ needs.validate-release-request.outputs.recovery_token_required }}
@@ -429,7 +429,7 @@ jobs:
             core.setOutput("recovery_token_required", String(recoveryTokenRequired));
       - name: Create or reuse durable Draft Release reservation
         id: reserve
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         env:
           SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
           RELEASE_TARGET: ${{ needs.validate-release-request.outputs.release_target }}
@@ -552,7 +552,7 @@ jobs:
     steps:
       - name: Determine release write authorization
         id: authority
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         env:
           SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
           INITIAL_RECOVERY_TOKEN_REQUIRED: ${{ needs.validate-release-request.outputs.recovery_token_required }}
@@ -610,7 +610,7 @@ jobs:
             }
             core.setOutput("recovery_token_required", String(recoveryTokenRequired));
       - name: Publish or verify the reserved Release
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         env:
           RESERVATION_ID: ${{ needs.reserve-release.outputs.reservation_id }}
           SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
@@ -704,7 +704,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout release infrastructure
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: main
           persist-credentials: false
@@ -732,7 +732,7 @@ jobs:
             exit 1
           fi
       - name: Checkout validated release source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ needs.validate-release-request.outputs.source_sha }}
           persist-credentials: false
@@ -761,7 +761,7 @@ jobs:
       - name: Build Console assets
         run: bun run build
       - name: Deploy Worker
-        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -834,7 +834,7 @@ jobs:
     steps:
       - name: Determine release write authorization
         id: authority
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         env:
           SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
           INITIAL_RECOVERY_TOKEN_REQUIRED: ${{ needs.validate-release-request.outputs.recovery_token_required }}
@@ -892,7 +892,7 @@ jobs:
             }
             core.setOutput("recovery_token_required", String(recoveryTokenRequired));
       - name: Checkout release infrastructure
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: main
           persist-credentials: false
@@ -913,7 +913,7 @@ jobs:
             exit 1
           fi
       - name: Mark release identity deployed
-        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         env:
           RESERVATION_ID: ${{ needs.reserve-release.outputs.reservation_id }}
           SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
@@ -965,7 +965,7 @@ jobs:
     permissions:
       contents: none
       id-token: write
-    uses: IvanLi-CN/oidrune/.github/workflows/notify.yml@911fca0a455f4bbef4b316d21eb7001eedcdc651
+    uses: IvanLi-CN/oidrune/.github/workflows/notify.yml@8602316b42702570d3753ce8217b3e362d870553
     with:
       outcome: failure
       on_gateway_failure: warn
