@@ -48,6 +48,7 @@ describe("Oidrune v25 brand asset contract", () => {
       join(sourceRoot, "oidrune-wordmark.svg"),
       join(sourceRoot, "oidrune-app-maskable.svg"),
       join(assetRoot, "oidrune-lockup-b2-on-dark.svg"),
+      join(assetRoot, "oidrune-lockup-b3-transparent.svg"),
       join(assetRoot, "oidrune-mark-reverse.svg"),
     ];
 
@@ -58,6 +59,11 @@ describe("Oidrune v25 brand asset contract", () => {
         expect(palette.has(color.toLowerCase())).toBe(true);
       }
     }
+
+    const transparentLockup = await read(
+      join(assetRoot, "oidrune-lockup-b3-transparent.svg"),
+    );
+    expect(transparentLockup).not.toMatch(/<rect\b/);
   });
 
   it("declares the /console metadata-only manifest and all raster sizes", async () => {

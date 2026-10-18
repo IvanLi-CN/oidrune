@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="./src/console/public/brand/v25/svg/oidrune-b3.svg" />
+    <source media="(prefers-color-scheme: dark)" srcset="./src/console/public/brand/v25/oidrune-lockup-b3-transparent.svg" />
     <img src="./src/console/public/brand/v25/svg/oidrune-b1.svg" alt="Oidrune 标志" width="300" />
   </picture>
 </p>
@@ -10,9 +10,19 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/IvanLi-CN/oidrune/releases"><img src="https://img.shields.io/github/v/release/IvanLi-CN/oidrune?display_name=tag&label=发布&style=flat-square" alt="最新发布" /></a>
+  <a href="https://github.com/IvanLi-CN/oidrune/releases"><img src="https://img.shields.io/github/v/release/IvanLi-CN/oidrune?display_name=tag&label=%E5%8F%91%E5%B8%83&style=flat-square" alt="最新发布" /></a>
   <a href="https://github.com/IvanLi-CN/oidrune/actions/workflows/ci-main.yml"><img src="https://img.shields.io/github/actions/workflow/status/IvanLi-CN/oidrune/ci-main.yml?branch=main&label=CI&style=flat-square" alt="CI 状态" /></a>
   <a href="https://github.com/IvanLi-CN/oidrune/actions/workflows/ci-pr.yml"><img src="https://img.shields.io/github/actions/workflow/status/IvanLi-CN/oidrune/ci-pr.yml?label=PR%20CI&style=flat-square" alt="Pull request CI 状态" /></a>
+  <a href="https://github.com/IvanLi-CN/oidrune/actions/workflows/oidrune-smoke.yml"><img src="https://img.shields.io/badge/%E7%94%9F%E4%BA%A7%20%E5%86%92%E7%83%9F-manual-0f766e?style=flat-square" alt="生产冒烟工作流" /></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="MIT 许可证" /></a>
+</p>
+
+<p align="center">
+  <a href="https://bun.sh/"><img src="https://img.shields.io/badge/Bun-%3E%3D1.4.0-f9f1e1?logo=bun&logoColor=111111&style=flat-square" alt="Bun &gt;=1.4.0" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white&style=flat-square" alt="TypeScript 7" /></a>
+  <a href="https://developers.cloudflare.com/workers/"><img src="https://img.shields.io/badge/Cloudflare%20Workers-runtime-F38020?logo=cloudflare&logoColor=white&style=flat-square" alt="Cloudflare Workers" /></a>
+  <a href="https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect"><img src="https://img.shields.io/badge/GitHub%20OIDC-secretless-24292F?logo=github&logoColor=white&style=flat-square" alt="GitHub OIDC" /></a>
+  <a href="https://core.telegram.org/bots/api"><img src="https://img.shields.io/badge/Telegram-delivery-26A5E4?logo=telegram&logoColor=white&style=flat-square" alt="Telegram delivery" /></a>
 </p>
 
 # Oidrune
