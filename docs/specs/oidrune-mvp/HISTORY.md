@@ -9,11 +9,15 @@
   `workflow.completed` contract. Callers do not inherit secrets from Oidrune.
 - A Trusted Workflow Release may be revoked when its behavior is unsafe;
   affected callers must upgrade to another approved SHA.
-- Prepared and failed release snapshots retain release-processing state only;
-  they never restore a revoked Trusted Workflow Release.
+- A failed manual release or deployment may be retried with the same release
+  identity; it never allocates a successor version or restores a revoked
+  Trusted Workflow Release.
 - GitHub-only Operator identity through Cloudflare Access is the current
   authentication contract; external Access and GitHub configuration remains
   separately authorized deployment work.
+- Release publication is an explicit manual request from `main`; one
+  `release_target` resolves against the trusted stable baseline, and merge
+  labels or workflow run numbers never choose the version or publication.
 
 ## Replacements / Background
 

@@ -29,6 +29,17 @@ An approved immutable commit SHA of a compatible Oidrune reusable notification
 workflow, whether distributed upstream or released by a self-hosted fork.
 _Avoid_: Main branch, latest workflow
 
+**Manual Release**:
+An operator-authorized release request dispatched from `main` with one explicit
+release target, resolved against the trusted stable baseline and bound to the
+current `main` commit.
+_Avoid_: PR release intent, run-number version, arbitrary commit release
+
+**Stable Release Version**:
+A final `MAJOR.MINOR.PATCH` version represented by one immutable `vMAJOR.MINOR.PATCH`
+tag and its matching GitHub Release.
+_Avoid_: Release type, PR label version
+
 ## Gateway Selection
 
 **Default Gateway**:

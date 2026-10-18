@@ -221,11 +221,14 @@ export class OidruneRepository {
     sha: string,
     actor: OperatorIdentity,
   ): Promise<void> {
+    const revokedAt = now();
     await this.db
       .prepare(
-        "UPDATE trusted_workflow_releases SET revoked_at = ?, revoked_by = ? WHERE sha = ?",
+        `INSERT INTO trusted_workflow_releases (sha, created_by, revoked_at, revoked_by)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(sha) DO UPDATE SET revoked_at = excluded.revoked_at, revoked_by = excluded.revoked_by`,
       )
-      .bind(now(), actor.subject, sha)
+      .bind(sha, actor.subject, revokedAt, actor.subject)
       .run();
     await this.audit(
       actor,

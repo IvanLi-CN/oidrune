@@ -1,0 +1,9 @@
+# Manual Version Release Delivery
+
+Status: accepted
+
+Oidrune uses one owner-provided `release_target` (`patch`, `minor`, `major`, or an explicit final `X.Y.Z`) and resolves it against the latest verified stable release. A new release identity is bound to the current `main` commit, a stable tag, and a durable Draft Release reservation before publication. If `main` advances after a failure, the workflow may recover one unfinished identity from its original source commit when that commit remains reachable and has passed `CI Main`; if the source and current `main` differ in workflow files, the operator-provisioned `OIDRUNE_RELEASE_TOKEN` is required because GitHub does not authorize `GITHUB_TOKEN` for that Release update. This keeps version selection and recovery independent from PR labels, merge order, and workflow run numbers.
+
+The `Release` workflow publishes the reserved GitHub Release first, then automatically runs the separate `Deploy` stage for that same identity. Deployment failure does not allocate a successor version; an unfinished reserved or published identity blocks new version allocation until same-identity recovery completes. Recovery uses the recorded baseline tag even if its Release object is no longer listed, while the trusted source is rechecked before the identity is marked deployed. Release dispatches are serialized with an explicit queue so a pending owner request is not silently replaced. The existing Oidrune gateway-to-Telegram path carries metadata-only failure context, and no release or deployment occurs from PR merge or PR labels.
+
+We considered retaining run-number versioning because it is simple to implement, but it does not represent owner intent or a trusted monotonic baseline and makes recovery dependent on workflow history. We also reject PR-label release because it couples merge metadata to publication and conflicts with the target-only contract.

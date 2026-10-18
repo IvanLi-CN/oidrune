@@ -26,7 +26,7 @@ describe("quality-gate declaration", () => {
     ) as QualityGateDeclaration;
 
     expect(declaration.default_branch).toBe("main");
-    expect(declaration.required_checks).toEqual(["quality", "Label Gate"]);
+    expect(declaration.required_checks).toEqual(["quality"]);
     expect(declaration.policy.baseline_policy).toBe("explicit-waiver-required");
     expect(declaration.policy.require_signed_commits).toBe(true);
     expect(declaration.policy.branch_protection).toEqual({
@@ -37,16 +37,13 @@ describe("quality-gate declaration", () => {
     expect(declaration.policy).not.toHaveProperty("review_policy");
     expect(declaration.expected_pr_workflows).toEqual([
       { workflow: "CI PR", jobs: ["quality"] },
-      { workflow: "Label Gate", jobs: ["Label Gate"] },
     ]);
   });
 
-  it("validates release labels for merge-queue commits", async () => {
-    const workflow = await readFile(".github/workflows/label-gate.yml", "utf8");
+  it("does not require a release-label workflow", async () => {
+    const workflowFiles = await readdir(".github/workflows");
 
-    expect(workflow).toContain("merge_group:");
-    expect(workflow).toContain("listPullRequestsAssociatedWithCommit");
-    expect(workflow).toContain("mergeGroup?.head_sha");
+    expect(workflowFiles).not.toContain("label-gate.yml");
   });
 
   it("pins each external GitHub Action to a full commit SHA", async () => {

@@ -1,123 +1,745 @@
 name: Release
 
 on:
-  workflow_run:
-    workflows: [CI Main]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
-      merge_commit_sha:
-        description: A validated merge commit to backfill.
+      release_target:
+        description: "Release target: patch, minor, major, or X.Y.Z"
         required: true
         type: string
 
 permissions: {}
 
+concurrency:
+  group: release-${{ github.ref_name }}
+  queue: max
+  cancel-in-progress: false
+
 jobs:
-  validate-release-target:
-    name: Validate release target
-    if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+  validate-release-request:
+    name: Validate manual release request
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
-      pull-requests: read
+      actions: read
+      # Draft Releases are only listed for callers with push access; this job
+      # performs no checkout or write API operation.
+      contents: write
     outputs:
-      sha: ${{ steps.target.outputs.sha }}
-      intent: ${{ steps.target.outputs.intent }}
+      source_sha: ${{ steps.request.outputs.source_sha }}
+      release_target: ${{ steps.request.outputs.release_target }}
+      baseline_tag: ${{ steps.request.outputs.baseline_tag }}
+      baseline_sha: ${{ steps.request.outputs.baseline_sha }}
+      version: ${{ steps.request.outputs.version }}
+      tag: ${{ steps.request.outputs.tag }}
+      recovery_token_required: ${{ steps.request.outputs.recovery_token_required }}
     steps:
-      - name: Resolve a main release commit
-        id: target
+      - name: Validate release target, trusted baseline, and CI Main
+        id: request
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         env:
-          WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
-          MANUAL_SHA: ${{ inputs.merge_commit_sha }}
+          RELEASE_TARGET: ${{ inputs.release_target }}
+          SOURCE_SHA: ${{ github.sha }}
+          RECOVERY_TOKEN_PRESENT: ${{ secrets.OIDRUNE_RELEASE_TOKEN != '' }}
         with:
           script: |
-            const sha = process.env.MANUAL_SHA || process.env.WORKFLOW_SHA;
-            if (!/^[a-f0-9]{40}$/.test(sha ?? "")) {
-              throw new Error("Expected a 40-character lowercase Git commit SHA.");
-            }
-            const { data: comparison } = await github.rest.repos.compareCommits({ owner: context.repo.owner, repo: context.repo.repo, base: sha, head: "main" });
-            if (!['ahead', 'identical'].includes(comparison.status)) {
-              throw new Error(`Release target ${sha} is not reachable from main.`);
-            }
-            const { data: pullRequests } = await github.rest.repos.listPullRequestsAssociatedWithCommit({ owner: context.repo.owner, repo: context.repo.repo, commit_sha: sha });
-            const merged = pullRequests.find((pr) => pr.merged_at && pr.base.ref === "main");
-            if (!merged) {
-              throw new Error(`No merged main PR is associated with ${sha}.`);
-            }
-            const labels = merged.labels.map((label) => label.name);
-            const intent = labels.filter((label) => ["type:major", "type:minor", "type:patch", "type:skip"].includes(label));
-            if (intent.length !== 1 || !labels.includes("channel:stable")) {
-              throw new Error("Validated release labels are absent from the merge commit.");
-            }
-            core.setOutput("sha", sha);
-            core.setOutput("intent", intent[0]);
+            const releaseTarget = process.env.RELEASE_TARGET?.trim() ?? "";
+            const dispatchSha = process.env.SOURCE_SHA ?? "";
+            core.setOutput("recovery_token_required", "false");
+            const versionPattern = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+            const stableTagPattern = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+            const policyMarker = "oidrune-release-policy: manual-version-release-delivery";
 
-  release:
-    needs: validate-release-target
-    if: needs.validate-release-target.result == 'success'
+            function parseVersion(value) {
+              const match = value.match(versionPattern);
+              if (!match) {
+                throw new Error(`Invalid stable SemVer: ${value}`);
+              }
+              return match.slice(1);
+            }
+
+            function compareNumericStrings(left, right) {
+              if (left.length !== right.length) return left.length > right.length ? 1 : -1;
+              if (left === right) return 0;
+              return left > right ? 1 : -1;
+            }
+
+            function compareVersions(left, right) {
+              for (let index = 0; index < left.length; index += 1) {
+                const comparison = compareNumericStrings(left[index], right[index]);
+                if (comparison !== 0) {
+                  return comparison;
+                }
+              }
+              return 0;
+            }
+
+            function formatVersion(parts) {
+              return parts.join(".");
+            }
+
+            function bumpVersion(base, target) {
+              if (target === "major") return [(BigInt(base[0]) + 1n).toString(), "0", "0"];
+              if (target === "minor") return [base[0], (BigInt(base[1]) + 1n).toString(), "0"];
+              return [base[0], base[1], (BigInt(base[2]) + 1n).toString()];
+            }
+
+            function readMetadata(body, key) {
+              return body?.match(new RegExp(`^${key}: (.+)$`, "m"))?.[1] ?? null;
+            }
+
+            async function readWorkflowTree(commitSha) {
+              const { data: commit } = await github.rest.git.getCommit({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                commit_sha: commitSha,
+              });
+              const { data: tree } = await github.rest.git.getTree({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tree_sha: commit.tree.sha,
+                recursive: "1",
+              });
+              if (tree.truncated) {
+                throw new Error(`The workflow tree for ${commitSha} is truncated; recovery cannot continue safely.`);
+              }
+              return new Map(
+                tree.tree
+                  .filter((entry) => entry.type === "blob" && entry.path?.startsWith(".github/workflows/"))
+                  .map((entry) => [entry.path, entry.sha]),
+              );
+            }
+
+            if (!/^(patch|minor|major|\d+\.\d+\.\d+)$/.test(releaseTarget)) {
+              throw new Error("release_target must be patch, minor, major, or X.Y.Z.");
+            }
+            if (!/^[a-f0-9]{40}$/.test(dispatchSha)) {
+              throw new Error("The workflow target must be a 40-character lowercase Git commit SHA.");
+            }
+
+            const { data: mainRef } = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "heads/main",
+            });
+            if (mainRef.object.sha !== dispatchSha) {
+              throw new Error(`The manual run target ${dispatchSha} is not the current main commit ${mainRef.object.sha}.`);
+            }
+
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+            const unfinishedIdentities = [];
+            for (const release of releases) {
+              const body = release.body ?? "";
+              if (!body.includes(policyMarker)) continue;
+              const releaseState = readMetadata(body, "release-state");
+              if (!["reserved", "published", "deployed"].includes(releaseState)) {
+                throw new Error(`Release ${release.tag_name} has an invalid release state.`);
+              }
+              if (releaseState !== "deployed") {
+                const recordedSourceSha = readMetadata(body, "source-sha");
+                if (!/^[a-f0-9]{40}$/.test(recordedSourceSha ?? "")) {
+                  throw new Error(`Release ${release.tag_name} has an invalid source identity.`);
+                }
+                unfinishedIdentities.push({
+                  release,
+                  releaseTarget: readMetadata(body, "release-target"),
+                  sourceSha: recordedSourceSha,
+                });
+              }
+            }
+            if (unfinishedIdentities.length > 1) {
+              throw new Error("Multiple unfinished Oidrune release identities require operator recovery.");
+            }
+            const unfinishedIdentity = unfinishedIdentities[0] ?? null;
+            if (unfinishedIdentity && unfinishedIdentity.releaseTarget !== releaseTarget) {
+              throw new Error(`Unfinished release ${unfinishedIdentity.release.tag_name} requires release target ${unfinishedIdentity.releaseTarget}.`);
+            }
+            const sourceSha = unfinishedIdentity?.sourceSha ?? dispatchSha;
+            core.setOutput("source_sha", sourceSha);
+            if (sourceSha !== dispatchSha) {
+              const sourceReachability = await github.rest.repos.compareCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                base: sourceSha,
+                head: dispatchSha,
+              });
+              if (!['ahead', 'identical'].includes(sourceReachability.data.status)) {
+                throw new Error(`The unfinished release source ${sourceSha} is not reachable from current main ${dispatchSha}.`);
+              }
+              const [sourceWorkflowTree, dispatchWorkflowTree] = await Promise.all([
+                readWorkflowTree(sourceSha),
+                readWorkflowTree(dispatchSha),
+              ]);
+              const workflowPaths = new Set([
+                ...sourceWorkflowTree.keys(),
+                ...dispatchWorkflowTree.keys(),
+              ]);
+              const workflowFilesChanged = [...workflowPaths].some(
+                (path) => sourceWorkflowTree.get(path) !== dispatchWorkflowTree.get(path),
+              );
+              if (workflowFilesChanged && process.env.RECOVERY_TOKEN_PRESENT !== "true") {
+                throw new Error("Recovery after a workflow change requires the OIDRUNE_RELEASE_TOKEN repository secret with Contents and Workflows write access.");
+              }
+              if (workflowFilesChanged) core.setOutput("recovery_token_required", "true");
+              core.info(`Recovering unfinished release ${unfinishedIdentity.release.tag_name} from ${sourceSha} after main advanced to ${dispatchSha}.`);
+            }
+
+            const mainRuns = await github.paginate(
+              github.rest.actions.listWorkflowRuns,
+              {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: "ci-main.yml",
+                head_sha: sourceSha,
+                status: "completed",
+                per_page: 100,
+              },
+            );
+            if (!mainRuns.some((run) => run.head_sha === sourceSha && run.conclusion === "success")) {
+              throw new Error(`CI Main has not passed for ${sourceSha}; no release side effect is allowed.`);
+            }
+
+            async function resolveTagTarget(tagName) {
+              let reference;
+              try {
+                ({ data: reference } = await github.rest.git.getRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `tags/${tagName}`,
+                }));
+              } catch (error) {
+                if (error.status === 404) return null;
+                throw error;
+              }
+
+              let object = reference.object;
+              for (let depth = 0; depth < 3; depth += 1) {
+                if (object.type === "commit") return object.sha;
+                if (object.type !== "tag") {
+                  throw new Error(`${tagName} resolves to unsupported object type ${object.type}.`);
+                }
+                const { data: tag } = await github.rest.git.getTag({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag_sha: object.sha,
+                });
+                object = tag.object;
+              }
+              throw new Error(`${tagName} has too many annotated tag layers.`);
+            }
+
+            const stableReleases = releases
+              .filter((release) => !release.draft && !release.prerelease && stableTagPattern.test(release.tag_name))
+              .filter((release) => {
+                const body = release.body ?? "";
+                return !body.includes(policyMarker) || readMetadata(body, "release-state") === "deployed";
+              })
+              .sort((left, right) => compareVersions(parseVersion(right.tag_name.slice(1)), parseVersion(left.tag_name.slice(1))));
+
+            if (!unfinishedIdentity && stableReleases.length === 0) {
+              throw new Error("No trusted stable GitHub Release exists to serve as the version baseline.");
+            }
+
+            const stableTags = await github.paginate(github.rest.repos.listTags, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+            const sourceStableTags = [];
+            for (const tag of stableTags.filter((candidate) => stableTagPattern.test(candidate.name))) {
+              if (await resolveTagTarget(tag.name) === sourceSha) {
+                sourceStableTags.push(tag.name);
+              }
+            }
+
+            const sourceIdentities = [];
+            for (const release of releases) {
+              const body = release.body ?? "";
+              if (!body.includes(policyMarker) || readMetadata(body, "source-sha") !== sourceSha) continue;
+              if (readMetadata(body, "release-target") !== releaseTarget) {
+                throw new Error(`Source ${sourceSha} already has a release identity with a different release target.`);
+              }
+              if (!stableTagPattern.test(release.tag_name) ||
+                  readMetadata(body, "canonical-version") !== release.tag_name.slice(1)) {
+                throw new Error(`Release ${release.tag_name} has inconsistent canonical version metadata.`);
+              }
+              const baselineTag = readMetadata(body, "trusted-baseline");
+              if (!baselineTag || !stableTagPattern.test(baselineTag)) {
+                throw new Error(`Release ${release.tag_name} has no valid trusted baseline metadata.`);
+              }
+              const baselineSha = await resolveTagTarget(baselineTag);
+              if (!baselineSha) {
+                throw new Error(`The trusted baseline ${baselineTag} has no resolvable tag target.`);
+              }
+              const targetSha = await resolveTagTarget(release.tag_name);
+              if (targetSha && targetSha !== sourceSha) {
+                throw new Error(`Release ${release.tag_name} does not resolve to its recorded source commit.`);
+              }
+              sourceIdentities.push({ release, targetSha, baselineTag, baselineSha });
+            }
+
+            if (sourceIdentities.length > 1) {
+              throw new Error(`Source ${sourceSha} has multiple manual release identities.`);
+            }
+            const sourceIdentity = sourceIdentities[0] ?? null;
+            if (sourceIdentity) {
+              const conflictingSourceTag = sourceStableTags.find(
+                (tagName) => tagName !== sourceIdentity.release.tag_name,
+              );
+              if (conflictingSourceTag) {
+                throw new Error(`Source ${sourceSha} already has conflicting stable tags: ${sourceStableTags.join(", ")}.`);
+              }
+            } else if (sourceStableTags.length > 0) {
+              throw new Error(`Source ${sourceSha} already has stable release tags without a matching reservation identity.`);
+            }
+
+            if (sourceIdentity) {
+              const version = sourceIdentity.release.tag_name.slice(1);
+              core.info(`Reusing same release identity ${sourceIdentity.release.tag_name} for ${sourceSha}.`);
+              core.setOutput("source_sha", sourceSha);
+              core.setOutput("release_target", releaseTarget);
+              core.setOutput("baseline_tag", sourceIdentity.baselineTag);
+              core.setOutput("baseline_sha", sourceIdentity.baselineSha);
+              core.setOutput("version", version);
+              core.setOutput("tag", sourceIdentity.release.tag_name);
+              return;
+            }
+
+            let baseline = null;
+            let baselineSha = null;
+            for (const candidate of stableReleases) {
+              const candidateSha = await resolveTagTarget(candidate.tag_name);
+              if (!candidateSha) continue;
+              const baselineComparison = await github.rest.repos.compareCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                base: candidateSha,
+                head: sourceSha,
+              });
+              if (!['ahead', 'identical'].includes(baselineComparison.data.status)) continue;
+              baseline = candidate;
+              baselineSha = candidateSha;
+              break;
+            }
+            if (!baseline || !baselineSha) {
+              throw new Error("No trusted stable GitHub Release has a resolvable tag reachable from main.");
+            }
+
+            const baselineVersion = parseVersion(baseline.tag_name.slice(1));
+            const version = formatVersion(
+              releaseTarget === "patch" || releaseTarget === "minor" || releaseTarget === "major"
+                ? bumpVersion(baselineVersion, releaseTarget)
+                : parseVersion(releaseTarget),
+            );
+            if (compareVersions(parseVersion(version), baselineVersion) <= 0) {
+              throw new Error(`The requested version ${version} must be greater than baseline ${baseline.tag_name}.`);
+            }
+
+            const tagName = `v${version}`;
+            const tagTarget = await resolveTagTarget(tagName);
+            if (tagTarget) {
+              throw new Error(`${tagName} already exists; same-identity recovery requires its recorded release identity and cannot allocate a successor version.`);
+            }
+
+            const existingRelease = releases.find((release) => release.tag_name === tagName);
+            if (existingRelease) {
+              throw new Error(`${tagName} already has a release without a matching reservation identity.`);
+            }
+
+            core.info(`Validated ${releaseTarget} as ${tagName} from ${baseline.tag_name} for ${sourceSha}.`);
+            core.setOutput("source_sha", sourceSha);
+            core.setOutput("release_target", releaseTarget);
+            core.setOutput("baseline_tag", baseline.tag_name);
+            core.setOutput("baseline_sha", baselineSha);
+            core.setOutput("version", version);
+            core.setOutput("tag", tagName);
+
+  reserve-release:
+    name: Reserve release identity
+    needs: validate-release-request
+    if: needs.validate-release-request.result == 'success'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
-      id-token: write
+    outputs:
+      reservation_id: ${{ steps.reserve.outputs.reservation_id }}
+    steps:
+      - name: Determine release write authorization
+        id: authority
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
+          INITIAL_RECOVERY_TOKEN_REQUIRED: ${{ needs.validate-release-request.outputs.recovery_token_required }}
+          RECOVERY_TOKEN_PRESENT: ${{ secrets.OIDRUNE_RELEASE_TOKEN != '' }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const sourceSha = process.env.SOURCE_SHA ?? "";
+            let recoveryTokenRequired = process.env.INITIAL_RECOVERY_TOKEN_REQUIRED === "true";
+            if (!/^[a-f0-9]{40}$/.test(sourceSha)) {
+              throw new Error("The release source identity must be a 40-character lowercase Git commit SHA.");
+            }
+            const { data: mainRef } = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "heads/main",
+            });
+            if (mainRef.object.sha !== sourceSha) {
+              async function readWorkflowTree(commitSha) {
+                const { data: commit } = await github.rest.git.getCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: commitSha,
+                });
+                const { data: tree } = await github.rest.git.getTree({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tree_sha: commit.tree.sha,
+                  recursive: "1",
+                });
+                if (tree.truncated) {
+                  throw new Error(`The workflow tree for ${commitSha} is truncated; release write authorization cannot continue safely.`);
+                }
+                return new Map(
+                  tree.tree
+                    .filter((entry) => entry.type === "blob" && entry.path?.startsWith(".github/workflows/"))
+                    .map((entry) => [entry.path, entry.sha]),
+                );
+              }
+
+              const [sourceWorkflowTree, mainWorkflowTree] = await Promise.all([
+                readWorkflowTree(sourceSha),
+                readWorkflowTree(mainRef.object.sha),
+              ]);
+              const workflowPaths = new Set([
+                ...sourceWorkflowTree.keys(),
+                ...mainWorkflowTree.keys(),
+              ]);
+              recoveryTokenRequired ||= [...workflowPaths].some(
+                (path) => sourceWorkflowTree.get(path) !== mainWorkflowTree.get(path),
+              );
+            }
+            if (recoveryTokenRequired && process.env.RECOVERY_TOKEN_PRESENT !== "true") {
+              throw new Error("Release write authorization requires the OIDRUNE_RELEASE_TOKEN repository secret with Contents and Workflows write access.");
+            }
+            core.setOutput("recovery_token_required", String(recoveryTokenRequired));
+      - name: Create or reuse durable Draft Release reservation
+        id: reserve
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
+          RELEASE_TARGET: ${{ needs.validate-release-request.outputs.release_target }}
+          BASELINE_TAG: ${{ needs.validate-release-request.outputs.baseline_tag }}
+          VERSION: ${{ needs.validate-release-request.outputs.version }}
+          TAG: ${{ needs.validate-release-request.outputs.tag }}
+        with:
+          github-token: ${{ steps.authority.outputs.recovery_token_required == 'true' && secrets.OIDRUNE_RELEASE_TOKEN || github.token }}
+          script: |
+            const sourceSha = process.env.SOURCE_SHA;
+            const releaseTarget = process.env.RELEASE_TARGET;
+            const baselineTag = process.env.BASELINE_TAG;
+            const version = process.env.VERSION;
+            const tagName = process.env.TAG;
+            const policyMarker = "oidrune-release-policy: manual-version-release-delivery";
+            const reservationBody = [
+              policyMarker,
+              `release-target: ${releaseTarget}`,
+              `canonical-version: ${version}`,
+              `source-sha: ${sourceSha}`,
+              `trusted-baseline: ${baselineTag}`,
+              "release-state: reserved",
+            ].join("\n");
+
+            async function resolveTagTarget() {
+              let reference;
+              try {
+                ({ data: reference } = await github.rest.git.getRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `tags/${tagName}`,
+                }));
+              } catch (error) {
+                if (error.status === 404) return null;
+                throw error;
+              }
+              let object = reference.object;
+              for (let depth = 0; depth < 3; depth += 1) {
+                if (object.type === "commit") return object.sha;
+                if (object.type !== "tag") {
+                  throw new Error(`${tagName} resolves to unsupported object type ${object.type}.`);
+                }
+                const { data: tag } = await github.rest.git.getTag({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag_sha: object.sha,
+                });
+                object = tag.object;
+              }
+              throw new Error(`${tagName} has too many annotated tag layers.`);
+            }
+
+            function readMetadata(body, key) {
+              return body?.match(new RegExp(`^${key}: (.+)$`, "m"))?.[1] ?? null;
+            }
+
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+            const release = releases.find((candidate) => candidate.tag_name === tagName) ?? null;
+
+            if (release) {
+              const body = release.body ?? "";
+              if (!body.includes(policyMarker)) {
+                throw new Error(`${tagName} is owned by a release without Oidrune reservation provenance.`);
+              }
+              const expectedMetadata = [
+                ["release-target", releaseTarget],
+                ["canonical-version", version],
+                ["source-sha", sourceSha],
+                ["trusted-baseline", baselineTag],
+              ];
+              for (const [key, expected] of expectedMetadata) {
+                if (readMetadata(body, key) !== expected) {
+                  throw new Error(`${tagName} reservation metadata does not match the validated release identity.`);
+                }
+              }
+              if (release.prerelease) {
+                throw new Error(`${tagName} is marked as a prerelease and cannot be reused.`);
+              }
+              if (!['reserved', 'published', 'deployed'].includes(readMetadata(body, "release-state"))) {
+                throw new Error(`${tagName} reservation has an invalid release state.`);
+              }
+              const tagTarget = await resolveTagTarget();
+              if (tagTarget && tagTarget !== sourceSha) {
+                throw new Error(`${tagName} does not resolve to the validated source commit.`);
+              }
+              core.info(`Reusing release reservation ${release.id} for ${tagName}.`);
+              core.setOutput("reservation_id", String(release.id));
+              return;
+            }
+
+            const { data: created } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tagName,
+              target_commitish: sourceSha,
+              name: tagName,
+              body: reservationBody,
+              draft: true,
+              prerelease: false,
+              generate_release_notes: false,
+            });
+            const tagTarget = await resolveTagTarget();
+            if (tagTarget && tagTarget !== sourceSha) {
+              throw new Error(`${tagName} reservation did not bind to the validated source commit.`);
+            }
+            core.info(`Created release reservation ${created.id} for ${tagName}.`);
+            core.setOutput("reservation_id", String(created.id));
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [validate-release-request, reserve-release]
+    if: needs.reserve-release.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Determine release write authorization
+        id: authority
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
+          INITIAL_RECOVERY_TOKEN_REQUIRED: ${{ needs.validate-release-request.outputs.recovery_token_required }}
+          RECOVERY_TOKEN_PRESENT: ${{ secrets.OIDRUNE_RELEASE_TOKEN != '' }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const sourceSha = process.env.SOURCE_SHA ?? "";
+            let recoveryTokenRequired = process.env.INITIAL_RECOVERY_TOKEN_REQUIRED === "true";
+            if (!/^[a-f0-9]{40}$/.test(sourceSha)) {
+              throw new Error("The release source identity must be a 40-character lowercase Git commit SHA.");
+            }
+            const { data: mainRef } = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "heads/main",
+            });
+            if (mainRef.object.sha !== sourceSha) {
+              async function readWorkflowTree(commitSha) {
+                const { data: commit } = await github.rest.git.getCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: commitSha,
+                });
+                const { data: tree } = await github.rest.git.getTree({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tree_sha: commit.tree.sha,
+                  recursive: "1",
+                });
+                if (tree.truncated) {
+                  throw new Error(`The workflow tree for ${commitSha} is truncated; release write authorization cannot continue safely.`);
+                }
+                return new Map(
+                  tree.tree
+                    .filter((entry) => entry.type === "blob" && entry.path?.startsWith(".github/workflows/"))
+                    .map((entry) => [entry.path, entry.sha]),
+                );
+              }
+
+              const [sourceWorkflowTree, mainWorkflowTree] = await Promise.all([
+                readWorkflowTree(sourceSha),
+                readWorkflowTree(mainRef.object.sha),
+              ]);
+              const workflowPaths = new Set([
+                ...sourceWorkflowTree.keys(),
+                ...mainWorkflowTree.keys(),
+              ]);
+              recoveryTokenRequired ||= [...workflowPaths].some(
+                (path) => sourceWorkflowTree.get(path) !== mainWorkflowTree.get(path),
+              );
+            }
+            if (recoveryTokenRequired && process.env.RECOVERY_TOKEN_PRESENT !== "true") {
+              throw new Error("Release write authorization requires the OIDRUNE_RELEASE_TOKEN repository secret with Contents and Workflows write access.");
+            }
+            core.setOutput("recovery_token_required", String(recoveryTokenRequired));
+      - name: Publish or verify the reserved Release
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          RESERVATION_ID: ${{ needs.reserve-release.outputs.reservation_id }}
+          SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
+          TAG: ${{ needs.validate-release-request.outputs.tag }}
+        with:
+          github-token: ${{ steps.authority.outputs.recovery_token_required == 'true' && secrets.OIDRUNE_RELEASE_TOKEN || github.token }}
+          script: |
+            const releaseId = Number(process.env.RESERVATION_ID);
+            const sourceSha = process.env.SOURCE_SHA;
+            const tagName = process.env.TAG;
+            if (!Number.isSafeInteger(releaseId) || releaseId < 1) {
+              throw new Error("The release reservation id must be a positive integer.");
+            }
+
+            const { data: release } = await github.rest.repos.getRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId,
+            });
+            if (release.tag_name !== tagName || release.prerelease) {
+              throw new Error("The reserved Release identity does not match the validated stable tag.");
+            }
+            const body = release.body ?? "";
+            if (!body.includes("oidrune-release-policy: manual-version-release-delivery") ||
+                !body.includes(`source-sha: ${sourceSha}`)) {
+              throw new Error("The reserved Release identity does not match the validated source commit.");
+            }
+
+            async function resolveTagTarget() {
+              let reference;
+              try {
+                ({ data: reference } = await github.rest.git.getRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `tags/${tagName}`,
+                }));
+              } catch (error) {
+                if (error.status === 404) return null;
+                throw error;
+              }
+              let object = reference.object;
+              for (let depth = 0; depth < 3; depth += 1) {
+                if (object.type === "commit") return object.sha;
+                if (object.type !== "tag") {
+                  throw new Error(`${tagName} resolves to unsupported object type ${object.type}.`);
+                }
+                const { data: tag } = await github.rest.git.getTag({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag_sha: object.sha,
+                });
+                object = tag.object;
+              }
+              throw new Error(`${tagName} has too many annotated tag layers.`);
+            }
+
+            const existingTagTarget = await resolveTagTarget();
+            if (existingTagTarget && existingTagTarget !== sourceSha) {
+              throw new Error(`${tagName} does not point to ${sourceSha}.`);
+            }
+
+            const publishedBody = body.replace(
+                "release-state: reserved",
+                "release-state: published",
+              );
+            if (release.draft || publishedBody !== body) {
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: releaseId,
+                draft: false,
+                prerelease: false,
+                body: publishedBody,
+              });
+              core.info(`Published ${tagName} from ${sourceSha}.`);
+            } else {
+              core.info(`Release ${tagName} is already published; continuing same-identity recovery.`);
+            }
+
+            const publishedTagTarget = await resolveTagTarget();
+            if (publishedTagTarget !== sourceSha) {
+              throw new Error(`${tagName} was not published at the validated source commit.`);
+            }
+
+  deploy:
+    name: Deploy published release
+    needs: [validate-release-request, reserve-release, publish-release]
+    if: needs.publish-release.result == 'success'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
     steps:
       - name: Checkout release infrastructure
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: main
+          persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
       - name: Install release infrastructure
         run: bun install --frozen-lockfile
-      - name: Validate production configuration
-        env:
-          ACCESS_AUD: ${{ vars.OIDRUNE_ACCESS_AUD }}
-          ACCESS_TEAM_DOMAIN: ${{ vars.OIDRUNE_ACCESS_TEAM_DOMAIN }}
-        run: |
-          set -euo pipefail
-          if grep -q '00000000-0000-0000-0000-000000000000' wrangler.jsonc; then
-            echo 'D1 database_id is still the unprovisioned placeholder.' >&2
-            exit 1
-          fi
-          if [[ -z "${ACCESS_AUD}" || -z "${ACCESS_TEAM_DOMAIN}" ]]; then
-            echo 'OIDRUNE_ACCESS_AUD and OIDRUNE_ACCESS_TEAM_DOMAIN repository variables are required.' >&2
-            exit 1
-          fi
-      - name: Ensure trusted-release schema
+      - name: Bootstrap trusted workflow release table
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -euo pipefail
-          result="$(bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --json --command "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'trusted_workflow_releases' LIMIT 1")"
-          table_name="$(jq -r '.[0].results[0].name // empty' <<<"${result}")"
-          if [[ "${table_name}" != "trusted_workflow_releases" ]]; then
-            bun ./node_modules/wrangler/bin/wrangler.js d1 migrations apply oidrune --remote
-          fi
+          bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --command "CREATE TABLE IF NOT EXISTS trusted_workflow_releases (sha TEXT PRIMARY KEY NOT NULL CHECK (length(sha) = 40), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, created_by TEXT NOT NULL, revoked_at TEXT, revoked_by TEXT)"
       - name: Refuse a revoked workflow release
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          MERGE_SHA: ${{ needs.validate-release-target.outputs.sha }}
+          TARGET_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
         run: |
           set -euo pipefail
-          result="$(bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --json --command "SELECT revoked_at FROM trusted_workflow_releases WHERE sha = '${MERGE_SHA}' LIMIT 1")"
+          result="$(bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --json --command "SELECT revoked_at FROM trusted_workflow_releases WHERE sha = '${TARGET_SHA}' LIMIT 1")"
           revoked_at="$(jq -r '.[0].results[0].revoked_at // empty' <<<"${result}")"
           if [[ -n "${revoked_at}" ]]; then
             echo 'The workflow release was revoked by an operator.' >&2
             exit 1
           fi
-      - name: Checkout validated release
+      - name: Checkout validated release source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: ${{ needs.validate-release-target.outputs.sha }}
+          ref: ${{ needs.validate-release-request.outputs.source_sha }}
+          persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
       - name: Install validated release
         run: bun install --frozen-lockfile
-      - name: Validate production configuration
+      - name: Validate target production configuration
         env:
           ACCESS_AUD: ${{ vars.OIDRUNE_ACCESS_AUD }}
           ACCESS_TEAM_DOMAIN: ${{ vars.OIDRUNE_ACCESS_TEAM_DOMAIN }}
@@ -136,14 +758,6 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: bun ./node_modules/wrangler/bin/wrangler.js d1 migrations apply oidrune --remote
-      - name: Prepare release snapshot
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          MERGE_SHA: ${{ needs.validate-release-target.outputs.sha }}
-          INTENT: ${{ needs.validate-release-target.outputs.intent }}
-        run: |
-          bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --command "INSERT INTO release_snapshots (merge_commit_sha, release_intent, workflow_sha, status, created_at, updated_at) VALUES ('${MERGE_SHA}', '${INTENT}', '${MERGE_SHA}', 'prepared', datetime('now'), datetime('now')) ON CONFLICT(merge_commit_sha) DO UPDATE SET release_intent=excluded.release_intent, workflow_sha=excluded.workflow_sha, status='prepared', updated_at=datetime('now')"
       - name: Build Console assets
         run: bun run build
       - name: Deploy Worker
@@ -153,62 +767,201 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --var ACCESS_AUD:${{ vars.OIDRUNE_ACCESS_AUD }} --var ACCESS_TEAM_DOMAIN:${{ vars.OIDRUNE_ACCESS_TEAM_DOMAIN }}
       - name: Verify production route boundaries
+        env:
+          ACCESS_TEAM_DOMAIN: ${{ vars.OIDRUNE_ACCESS_TEAM_DOMAIN }}
+          OIDRUNE_PUBLIC_ORIGIN: ${{ vars.OIDRUNE_PUBLIC_ORIGIN }}
         run: |
           set -euo pipefail
-          origin='https://oidrune.707979.xyz'
+          origin="${OIDRUNE_PUBLIC_ORIGIN:-https://oidrune.707979.xyz}"
+          if [[ ! "${origin}" =~ ^https://[^/?#]+$ ]]; then
+            echo 'OIDRUNE_PUBLIC_ORIGIN must be an HTTPS origin without a path.' >&2
+            exit 1
+          fi
           root_headers="$(curl --silent --show-error --max-time 10 --output /dev/null --dump-header - "${origin}/")"
           root_status="$(awk 'NR == 1 { print $2 }' <<<"${root_headers}")"
           root_location="$(awk 'BEGIN { IGNORECASE=1 } /^location:/ { sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit }' <<<"${root_headers}")"
-          console_status="$(curl --silent --show-error --max-time 10 --output /dev/null --write-out '%{http_code}' "${origin}/console/")"
+          console_headers="$(curl --silent --show-error --max-time 10 --output /dev/null --dump-header - "${origin}/console/")"
+          console_status="$(awk 'NR == 1 { print $2 }' <<<"${console_headers}")"
+          console_location="$(awk 'BEGIN { IGNORECASE=1 } /^location:/ { sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit }' <<<"${console_headers}")"
+          admin_headers="$(curl --silent --show-error --max-time 10 --output /dev/null --dump-header - "${origin}/api/admin/config")"
+          admin_status="$(awk 'NR == 1 { print $2 }' <<<"${admin_headers}")"
+          admin_location="$(awk 'BEGIN { IGNORECASE=1 } /^location:/ { sub(/^[^:]+:[[:space:]]*/, ""); sub(/\r$/, ""); print; exit }' <<<"${admin_headers}")"
+          access_domain="${ACCESS_TEAM_DOMAIN#https://}"
+          access_domain="${access_domain#http://}"
+          access_domain="${access_domain%/}"
+          access_login_path='/cdn-cgi/access/login'
+          access_login_target="${access_login_path}/${origin#https://}"
           if [[ "${root_status}" != '302' || "${root_location}" != '/console/' ]]; then
             echo 'The production root does not redirect to the protected console.' >&2
             exit 1
           fi
-          if [[ "${console_status}" != '302' ]]; then
-            echo 'The production console is not protected by Cloudflare Access.' >&2
+          is_access_login_location() {
+            case "$1" in
+              "https://${access_domain}${access_login_path}"|"https://${access_domain}${access_login_path}?"*|"https://${access_domain}${access_login_target}"|"https://${access_domain}${access_login_target}?"*|"${access_login_path}"|"${access_login_path}?"*|"${access_login_target}"|"${access_login_target}?"*) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+          if ! is_access_login_location "${console_location}" || ! is_access_login_location "${admin_location}"; then
+            echo 'The protected production routes do not redirect to the configured Cloudflare Access login boundary.' >&2
             exit 1
           fi
-      - name: Publish stable GitHub release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65
-        with:
-          tag_name: v0.1.${{ github.run_number }}
-          target_commitish: ${{ needs.validate-release-target.outputs.sha }}
-          generate_release_notes: true
+          if [[ "${console_status}" != '302' || "${admin_status}" != '302' ]]; then
+            echo 'The production console or administrator API is not protected by Cloudflare Access.' >&2
+            exit 1
+          fi
       - name: Promote trusted reusable workflow release
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          MERGE_SHA: ${{ needs.validate-release-target.outputs.sha }}
+          TARGET_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
         run: |
-          bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --command "INSERT INTO trusted_workflow_releases (sha, created_by, revoked_at, revoked_by) VALUES ('${MERGE_SHA}', 'release-automation', NULL, NULL) ON CONFLICT(sha) DO NOTHING; UPDATE release_snapshots SET workflow_sha='${MERGE_SHA}', status='deployed', updated_at=datetime('now') WHERE merge_commit_sha='${MERGE_SHA}'"
+          set -euo pipefail
+          bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --command "INSERT INTO trusted_workflow_releases (sha, created_by, revoked_at, revoked_by) VALUES ('${TARGET_SHA}', 'release-automation', NULL, NULL) ON CONFLICT(sha) DO NOTHING"
+          result="$(bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --json --command "SELECT revoked_at FROM trusted_workflow_releases WHERE sha = '${TARGET_SHA}' LIMIT 1")"
+          trust_state="$(jq -r 'if ((.[0].results // []) | length) != 1 then "missing" elif .[0].results[0].revoked_at == null then "active" else "revoked" end' <<<"${result}")"
+          if [[ "${trust_state}" != 'active' ]]; then
+            echo 'The workflow release was revoked before trust promotion completed.' >&2
+            exit 1
+          fi
 
-  close-failed-release-snapshot:
-    needs: [validate-release-target, release]
-    if: always() && needs.release.result == 'failure'
+  mark-release-deployed:
+    name: Mark release identity deployed
+    needs: [validate-release-request, reserve-release, publish-release, deploy]
+    if: needs.deploy.result == 'success'
     runs-on: ubuntu-24.04
     permissions:
-      contents: read
+      contents: write
     steps:
+      - name: Determine release write authorization
+        id: authority
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
+          INITIAL_RECOVERY_TOKEN_REQUIRED: ${{ needs.validate-release-request.outputs.recovery_token_required }}
+          RECOVERY_TOKEN_PRESENT: ${{ secrets.OIDRUNE_RELEASE_TOKEN != '' }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const sourceSha = process.env.SOURCE_SHA ?? "";
+            let recoveryTokenRequired = process.env.INITIAL_RECOVERY_TOKEN_REQUIRED === "true";
+            if (!/^[a-f0-9]{40}$/.test(sourceSha)) {
+              throw new Error("The release source identity must be a 40-character lowercase Git commit SHA.");
+            }
+            const { data: mainRef } = await github.rest.git.getRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "heads/main",
+            });
+            if (mainRef.object.sha !== sourceSha) {
+              async function readWorkflowTree(commitSha) {
+                const { data: commit } = await github.rest.git.getCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  commit_sha: commitSha,
+                });
+                const { data: tree } = await github.rest.git.getTree({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tree_sha: commit.tree.sha,
+                  recursive: "1",
+                });
+                if (tree.truncated) {
+                  throw new Error(`The workflow tree for ${commitSha} is truncated; release write authorization cannot continue safely.`);
+                }
+                return new Map(
+                  tree.tree
+                    .filter((entry) => entry.type === "blob" && entry.path?.startsWith(".github/workflows/"))
+                    .map((entry) => [entry.path, entry.sha]),
+                );
+              }
+
+              const [sourceWorkflowTree, mainWorkflowTree] = await Promise.all([
+                readWorkflowTree(sourceSha),
+                readWorkflowTree(mainRef.object.sha),
+              ]);
+              const workflowPaths = new Set([
+                ...sourceWorkflowTree.keys(),
+                ...mainWorkflowTree.keys(),
+              ]);
+              recoveryTokenRequired ||= [...workflowPaths].some(
+                (path) => sourceWorkflowTree.get(path) !== mainWorkflowTree.get(path),
+              );
+            }
+            if (recoveryTokenRequired && process.env.RECOVERY_TOKEN_PRESENT !== "true") {
+              throw new Error("Release write authorization requires the OIDRUNE_RELEASE_TOKEN repository secret with Contents and Workflows write access.");
+            }
+            core.setOutput("recovery_token_required", String(recoveryTokenRequired));
       - name: Checkout release infrastructure
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: main
+          persist-credentials: false
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
       - name: Install release infrastructure
         run: bun install --frozen-lockfile
-      - name: Fail closed release snapshot
+      - name: Confirm trusted workflow release remains active
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          MERGE_SHA: ${{ needs.validate-release-target.outputs.sha }}
+          TARGET_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
         run: |
-          bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --command "UPDATE release_snapshots SET status='failed', updated_at=datetime('now') WHERE merge_commit_sha='${MERGE_SHA}' AND status='prepared'"
+          set -euo pipefail
+          result="$(bun ./node_modules/wrangler/bin/wrangler.js d1 execute oidrune --remote --json --command "SELECT revoked_at FROM trusted_workflow_releases WHERE sha = '${TARGET_SHA}' LIMIT 1")"
+          trust_state="$(jq -r 'if ((.[0].results // []) | length) != 1 then "missing" elif .[0].results[0].revoked_at == null then "active" else "revoked" end' <<<"${result}")"
+          if [[ "${trust_state}" != 'active' ]]; then
+            echo 'The workflow release is not actively trusted; the Release identity remains unfinished.' >&2
+            exit 1
+          fi
+      - name: Mark release identity deployed
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          RESERVATION_ID: ${{ needs.reserve-release.outputs.reservation_id }}
+          SOURCE_SHA: ${{ needs.validate-release-request.outputs.source_sha }}
+          TAG: ${{ needs.validate-release-request.outputs.tag }}
+        with:
+          github-token: ${{ steps.authority.outputs.recovery_token_required == 'true' && secrets.OIDRUNE_RELEASE_TOKEN || github.token }}
+          script: |
+            const releaseId = Number(process.env.RESERVATION_ID);
+            const sourceSha = process.env.SOURCE_SHA;
+            const tagName = process.env.TAG;
+            if (!Number.isSafeInteger(releaseId) || releaseId < 1) {
+              throw new Error("The release reservation id must be a positive integer.");
+            }
+            const { data: release } = await github.rest.repos.getRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId,
+            });
+            const body = release.body ?? "";
+            if (release.tag_name !== tagName ||
+                !body.includes("oidrune-release-policy: manual-version-release-delivery") ||
+                !body.includes(`source-sha: ${sourceSha}`)) {
+              throw new Error("The deployed Release identity does not match the validated source commit.");
+            }
+            const deployedBody = body.replace(
+              "release-state: published",
+              "release-state: deployed",
+            ).replace("release-state: reserved", "release-state: deployed");
+            if (!deployedBody.includes("release-state: deployed")) {
+              throw new Error("The Release identity is missing a publishable state.");
+            }
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: releaseId,
+              body: deployedBody,
+            });
 
   release-failure-notification:
     name: Release Failure Notification
-    needs:
-      [validate-release-target, release, close-failed-release-snapshot]
-    if: always() && (needs.validate-release-target.result == 'failure' || needs.release.result == 'failure')
+    needs: [validate-release-request, reserve-release, publish-release, deploy, mark-release-deployed]
+    if: >-
+      always() &&
+      (needs.validate-release-request.result == 'failure' ||
+       needs.reserve-release.result == 'failure' ||
+       needs.publish-release.result == 'failure' ||
+       needs.deploy.result == 'failure' ||
+       needs.mark-release-deployed.result == 'failure')
     permissions:
       contents: none
       id-token: write
@@ -216,4 +969,4 @@ jobs:
     with:
       outcome: failure
       on_gateway_failure: warn
-      summary: Release failed after CI Main; inspect the release workflow run for intent and commit context.
+      summary: Manual release target ${{ inputs.release_target }} for source ${{ needs.validate-release-request.outputs.source_sha || github.sha }} failed during Release or Deploy; retry the same target for same-identity recovery and inspect the workflow run.

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "policy": "manual-version-release-delivery",
+  "release_unit": "oidrune",
+  "target_input": "release_target",
+  "target_grammar": {
+    "symbolic": ["patch", "minor", "major"],
+    "explicit": "X.Y.Z",
+    "channel": "stable"
+  },
+  "baseline": {
+    "source": "latest-deployed-or-unmanaged-non-prerelease-github-release",
+    "tag_pattern": "vX.Y.Z",
+    "must_be_reachable_from": "main"
+  },
+  "identity": [
+    "source_sha",
+    "release_target",
+    "canonical_version",
+    "tag",
+    "reservation_id"
+  ],
+  "reservation": {
+    "provider": "github-draft-release",
+    "states": ["reserved", "published", "deployed"],
+    "same_identity_recovery": true
+  },
+  "workflow": {
+    "release_trigger": "workflow_dispatch",
+    "release_branch": "main",
+    "serialization": "queued-release-dispatches",
+    "recovery_token": "OIDRUNE_RELEASE_TOKEN-when-workflows-change",
+    "deploy": "automatic-after-release",
+    "release_workflow": "Release"
+  },
+  "notifications": {
+    "transport": "oidrune-gateway-telegram",
+    "mode": "metadata-only",
+    "on": "release-or-deploy-failure"
+  },
+  "excluded_routes": [
+    "pr-label-release",
+    "pull-request-labels",
+    "run-number-versioning"
+  ]
+}

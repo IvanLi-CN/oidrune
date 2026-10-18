@@ -333,6 +333,25 @@ describe("Worker security boundaries", () => {
     await expect(repository.isTrustedWorkflowRelease(sha)).resolves.toBe(false);
   });
 
+  it("records a tombstone when revoking an unknown workflow release", async () => {
+    const sha = "c".repeat(40);
+    const repository = new OidruneRepository(bindings.DB);
+
+    await repository.revokeWorkflowRelease(sha, {
+      subject: "operator",
+      email: null,
+    });
+
+    await expect(repository.isTrustedWorkflowRelease(sha)).resolves.toBe(false);
+    await expect(
+      bindings.DB.prepare(
+        "SELECT revoked_at, revoked_by FROM trusted_workflow_releases WHERE sha = ?",
+      )
+        .bind(sha)
+        .first<{ revoked_at: string | null; revoked_by: string | null }>(),
+    ).resolves.toMatchObject({ revoked_by: "operator" });
+  });
+
   it("accepts trusted workflow references from upstream and fork repositories", () => {
     const sha = "d".repeat(40);
 
